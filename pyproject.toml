@@ -50,5 +50,19 @@ select = ["I", "D", "F"]
 ignore = ["D104", "D100"]
 fixable = ["ALL"]
 
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["D", "I", "S", "W"]
+"**__main__.py" = ["D103"]
+
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+[tool.pytest.ini_options]
+addopts = ["--import-mode=importlib", "--cov=."]
+filterwarnings = ["error", "ignore::DeprecationWarning"]
+pythonpath = ["."]
+
+
+[tool.coverage.report]
+omit = ["*/tests/*"]
+exclude_also = ["raise NotImplementedError", "@(abc\\.)?abstractmethod"]
