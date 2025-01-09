@@ -13,10 +13,7 @@ from enum import Enum
 from types import UnionType
 from typing import Annotated, Dict, Iterator, List, Optional, Sequence, Set
 
-from py2ts.config import CONFIG
-
-# Helper annotation for type names
-TypeName = Annotated[str, "TypeName"]
+from .config import CONFIG
 
 
 class TypescriptPrimitive(Enum):
@@ -146,7 +143,10 @@ class DerivedType(TypescriptType, ABC):
 
     def __hash__(self) -> int:
         """Return a hash value for the derived type."""
-        return hash(self.elements)
+        if isinstance(self.elements, Set):
+            return hash(frozenset(self.elements))
+        else:
+            return hash(self.elements)
 
     def __iter__(self) -> Iterator[TypescriptType]:
         """Return an iterator over the elements of the derived type."""
@@ -181,6 +181,9 @@ class TSUnionType(DerivedType):
                 strs.append(str(t))
 
         return " | ".join(strs)
+
+    def __hash__(self) -> int:
+        return super().__hash__()
 
 
 @dataclass
@@ -261,6 +264,7 @@ class TypescriptIntersectionType(DerivedType):
 # ---------------------------------------------------------------------------- #
 
 
+@dataclass
 class TSComplex(TypescriptType, ABC):
     """Represents a TypeScript complex type.
 
@@ -363,14 +367,40 @@ class TSInterface(TSComplex):
         """Return a string representation of the interface including nested interfaces and enums."""
         this_interface_str = str(self)
 
+        visited = set()
+
+        def parse_elements(element: TypescriptType):
+            """Recursively get all elements and add them to the string."""
+            nonlocal this_interface_str
+            nonlocal visited
+
+            # Early exit if already visited
+            if element in visited:
+                return
+
+            if isinstance(element, TSInterface):
+                this_interface_str = f"{element}\n\n{this_interface_str}"
+                visited.add(element)
+
+                for key, value in element.elements.items():
+                    parse_elements(value)
+
+            elif isinstance(element, DerivedType):
+                elements = list(element.__iter__())
+                for ele in elements:
+                    if element in visited:
+                        continue
+
+                    parse_elements(ele)
+                    visited.add(ele)
+            else:
+                visited.add(element)
+
         for key, value in self.elements.items():
-            if isinstance(value, TSInterface):
-                this_interface_str = f"{value.full_str()}\n\n{this_interface_str}"
-            elif isinstance(value, DerivedType):
-                # TODO
-                raise NotImplementedError("Nested enums are not yet supported")
+            parse_elements(value)
+
         return this_interface_str
 
     def __hash__(self) -> int:
         """Return a hash value for the complex type."""
-        return super().__hash__()
+        return hash(self.name)
