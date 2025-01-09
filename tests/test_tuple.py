@@ -52,7 +52,7 @@ def test_basic_tuple(py_types, expected_ts_type, expected_ts_str):
     for ts_str in expected_ts_str:
         assert ts_str in str(t)
     assert isinstance(t, TSTupleType)
-    assert len(t.elements) == len(expected_ts_str)
+    assert len(t) == len(expected_ts_str)
 
     # Test tuple (Python 3.9+ syntax)
     t = generate_ts(tuple[py_types])
@@ -61,4 +61,4 @@ def test_basic_tuple(py_types, expected_ts_type, expected_ts_str):
     for ts_str in expected_ts_str:
         assert ts_str in str(t)
     assert isinstance(t, TSTupleType)
-    assert len(t.elements) == len(expected_ts_str)
+    assert len(t) == len(expected_ts_str)

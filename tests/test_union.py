@@ -29,7 +29,7 @@ def test_optional_extras(config_none_as_null, py_type, expected_ts_str):
 
     # Check union has 2 types
     assert isinstance(t, TSUnionType)
-    assert len(t.types) == 2
+    assert len(t) == 2
 
 
 @pytest.mark.parametrize(
@@ -38,6 +38,9 @@ def test_optional_extras(config_none_as_null, py_type, expected_ts_str):
         (Union[str, int], ("string", "number")),
         (Union[float, bool], ("number", "boolean")),
         (Union[bool, str], ("boolean", "string")),
+        (str | bool, ("boolean", "string")),
+        (str | int, ("string", "number")),
+        (str | float, ("string", "number")),
     ],
 )
 def test_basic_union(py_type, expected_ts_str):
@@ -50,7 +53,7 @@ def test_basic_union(py_type, expected_ts_str):
         assert ts_str in str(t)
 
     assert isinstance(t, TSUnionType)
-    assert len(t.types) == len(expected_ts_str)
+    assert len(t) == len(expected_ts_str)
 
 
 @pytest.mark.parametrize(
@@ -73,7 +76,7 @@ def test_concat_of_same_type(py_type, expected_ts_str):
         assert ts_str in str(t)
 
     assert isinstance(t, TSUnionType)
-    assert len(t.types) == len(expected_ts_str)
+    assert len(t) == len(expected_ts_str)
 
 
 def test_nested_unions():
@@ -82,7 +85,7 @@ def test_nested_unions():
     """
     t = generate_ts(Union[Union[str, int], Union[float, bool]])
     assert isinstance(t, TSUnionType)
-    assert len(t.types) == 3
+    assert len(t) == 3
 
-    for i in t.types:
+    for i in t:
         assert isinstance(i, TSPrimitiveType)

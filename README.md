@@ -64,7 +64,7 @@ Config["none_to_null"] = False
 ```
 ```python
 # Pass configuration to the `generate` function
-from py2ts import generate
+from py2ts import generate_ts
 generate_ts(str, config={"none_to_null": False})
 ```
 

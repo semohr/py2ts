@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from types import UnionType
-from typing import Annotated, Dict, List, Optional, Set
+from typing import Annotated, Dict, Iterator, List, Optional, Sequence, Set
 
 from py2ts.config import CONFIG
 
@@ -74,15 +74,28 @@ class TypescriptPrimitive(Enum):
 
 
 # ---------------------------------------------------------------------------- #
-#                                  Basic types                                 #
+#                                  Primitive types                             #
 # ---------------------------------------------------------------------------- #
 
 
+def _elements_to_names(
+    elements: Sequence[TypescriptType] | Set[TypescriptType],
+) -> List[str]:
+    strs: List[str] = []
+    for t in elements:
+        if isinstance(t, TSComplex):
+            strs.append(t.name)
+        else:
+            strs.append(str(t))
+    return strs
+
+
+@dataclass(kw_only=True)
 class TypescriptType(ABC):
     """Represents a TypeScript type."""
 
-    not_required: bool
-    comment: Optional[str]
+    not_required: bool = False
+    comment: Optional[str] = None
 
     @abstractmethod
     def __str__(self) -> str:
@@ -116,8 +129,41 @@ class TSPrimitiveType(TypescriptType):
         return hash(self.type)
 
 
+# ---------------------------------------------------------------------------- #
+#                                 Derived Types                                #
+# ---------------------------------------------------------------------------- #
+
+
 @dataclass
-class TSUnionType(TypescriptType):
+class DerivedType(TypescriptType, ABC):
+    """Represents a TypeScript derived type.
+
+    This is an abstract class that is used as a base class for more complex types
+    such as arrays, tuples, and unions.
+    """
+
+    elements: Set[TypescriptType] | TypescriptType
+
+    def __hash__(self) -> int:
+        """Return a hash value for the derived type."""
+        return hash(self.elements)
+
+    def __iter__(self) -> Iterator[TypescriptType]:
+        """Return an iterator over the elements of the derived type."""
+        if isinstance(self.elements, Set):
+            yield from self.elements
+        else:
+            yield self.elements
+
+    def __len__(self) -> int:
+        """Return the number of elements in the derived type."""
+        if isinstance(self.elements, Set):
+            return len(self.elements)
+        return 1
+
+
+@dataclass
+class TSUnionType(DerivedType):
     """Represents a TypeScript union type.
 
     Example:
@@ -125,19 +171,20 @@ class TSUnionType(TypescriptType):
     string | number | boolean
     """
 
-    types: Set[TypescriptType]
-
     def __str__(self) -> str:
         """Return a string representation of the union type for use in the generated code."""
-        return " | ".join(str(t) for t in self.types)
+        strs = []
+        for t in self:
+            if isinstance(t, TSInterface):
+                strs.append(t.name)
+            else:
+                strs.append(str(t))
 
-    def __hash__(self) -> int:
-        """Return a hash value for the union type."""
-        return hash(self.types)
+        return " | ".join(strs)
 
 
 @dataclass
-class TSArrayType(TypescriptType):
+class TSArrayType(DerivedType):
     """Represents a TypeScript array type.
 
     Example:
@@ -145,45 +192,50 @@ class TSArrayType(TypescriptType):
     Array<number|string>
     """
 
-    element: TypescriptType
-
     def __str__(self) -> str:
         """Return a string representation of the array type for use in the generated code."""
-        return f"Array<{str(self.element)}>"
+        if isinstance(self.elements, Set):
+            raise NotImplementedError("Array of multiple types is not supported!")
+
+        return f"Array<{_elements_to_names([self.elements])[0]}>"
 
 
 @dataclass
-class TSTupleType(TypescriptType):
+class TSTupleType(DerivedType):
     """Represents a TypeScript tuple type.
 
     Example:
     [string, number, boolean]
     """
 
-    elements: Set[TypescriptType]
-
     def __str__(self) -> str:
         """Return a string representation of the tuple type for use in the generated code."""
-        return f"[{', '.join(str(t) for t in self.elements)}]"
+        if isinstance(self.elements, Set):
+            e_names = _elements_to_names(self.elements)
+        else:
+            e_names = [str(self.elements)]
+
+        return f"[{', '.join(e_names)}]"
 
 
 @dataclass
-class TypescriptLiteralType(TypescriptType):
+class TypescriptLiteralType(DerivedType):
     """Represents a TypeScript literal type.
 
     Example:
     "foo"
     """
 
-    element: str
-
     def __str__(self) -> str:
         """Return a string representation of the literal type for use in the generated code."""
-        return f'"{self.element}"'
+        if isinstance(self.elements, Set):
+            raise NotImplementedError("Literal of multiple types is not supported!")
+
+        return f'"{self.elements}"'
 
 
 @dataclass
-class TypescriptIntersectionType(TypescriptType):
+class TypescriptIntersectionType(DerivedType):
     """Represents a TypeScript intersection type.
 
     Note:
@@ -194,11 +246,14 @@ class TypescriptIntersectionType(TypescriptType):
     {"foo":number} & {"bar":string}
     """
 
-    types: Set[TypescriptType]
-
     def __str__(self) -> str:
         """Return a string representation of the intersection type for use in the generated code."""
-        return " & ".join(str(t) for t in self.types)
+        if isinstance(self.elements, Set):
+            e_names = _elements_to_names(self.elements)
+        else:
+            e_names = [str(self.elements)]
+
+        return " & ".join(e_names)
 
 
 # ---------------------------------------------------------------------------- #
@@ -206,8 +261,28 @@ class TypescriptIntersectionType(TypescriptType):
 # ---------------------------------------------------------------------------- #
 
 
+class TSComplex(TypescriptType, ABC):
+    """Represents a TypeScript complex type.
+
+    This is an abstract class that is used as a base class for more complex types
+    such as interfaces and enums.
+
+    We assume the name is unique for each complex type therefore we use it as the hash.
+    """
+
+    name: str
+
+    def __str__(self) -> str:
+        """Return the name of the complex type."""
+        return self.name
+
+    def __hash__(self) -> int:
+        """Return a hash value for the complex type."""
+        return hash(self.name)
+
+
 @dataclass
-class TypescriptEnumType(TypescriptType):
+class TypescriptEnumType(TSComplex):
     """Represents a TypeScript enum type.
 
     Example:
@@ -225,12 +300,14 @@ class TypescriptEnumType(TypescriptType):
     }
     """
 
-    name: str
     keys: List[str]
     values: Optional[List[str | int]]
 
     def __str__(self) -> str:
-        """Return a string representation of the enum type for use in the generated code."""
+        """Return a string representation of the enum for use in the generated code.
+
+        This method is used to generate the full enum definition.
+        """
         enum_str = f"enum {self.name}{{\n"
         if self.values is None:
             enum_str += ",\n\t".join(self.keys)
@@ -248,7 +325,7 @@ class TypescriptEnumType(TypescriptType):
 
 
 @dataclass
-class TypescriptInterface(TypescriptType):
+class TSInterface(TSComplex):
     """Represents a TypeScript interface.
 
     Example:
@@ -260,54 +337,20 @@ class TypescriptInterface(TypescriptType):
     """
 
     name: str
-    elements: Dict[str, TypescriptType | TypescriptInterface | TypescriptEnumType]
+    elements: Dict[str, TypescriptType | TSInterface | TypescriptEnumType]
 
     def __str__(self) -> str:
-        """Return a string representation of the interface for use in the generated code."""
-        interface_str = f"interface {self.name} {{\n"
-        for key, value in self.elements.items():
-            if isinstance(value, (TypescriptInterface, TypescriptEnumType)):
-                interface_str += f"\t{key}: {value.name};\n"
-            else:
-                interface_str += f"\t{key}: {value};\n"
-        interface_str += "}"
-        return interface_str
+        """Return a string representation of the interface.
 
-    def str_recursive(self) -> str:
-        """Return a string representation of the interface for use in the generated code.
-
-        This method is used to generate the full interface definition, including nested
-        interfaces and enums.
+        This does not include nested interfaces or enums, you may need to add them manually.
         """
-        visited = set()
         interface_str = f"interface {self.name} {{\n"
-
-        def add_interface(value: TypescriptInterface):
-            nonlocal interface_str
-            if value.name not in visited:
-                visited.add(value.name)
-                interface_str = f"{value.str_recursive()}\n\n{interface_str}"
-
-        def add_enum(value: TypescriptEnumType):
-            nonlocal interface_str
-            if value.name not in visited:
-                visited.add(value.name)
-                interface_str = f"{value}\n\n{interface_str}"
 
         for key, value in self.elements.items():
             a = key
             if value.not_required:
                 a += "?"
-
-            if isinstance(value, TypescriptInterface):
-                # add interface or enum to the top of the file
-                add_interface(value)
-                b = value.name
-            elif isinstance(value, TypescriptEnumType):
-                add_enum(value)
-                b = value.name
-            else:
-                b = value
+            b = _elements_to_names([value])[0]
 
             # add the type to the interface
             interface_str += f"\t{a}: {b};\n"
@@ -315,3 +358,19 @@ class TypescriptInterface(TypescriptType):
         interface_str += "}"
 
         return interface_str
+
+    def full_str(self) -> str:
+        """Return a string representation of the interface including nested interfaces and enums."""
+        this_interface_str = str(self)
+
+        for key, value in self.elements.items():
+            if isinstance(value, TSInterface):
+                this_interface_str = f"{value.full_str()}\n\n{this_interface_str}"
+            elif isinstance(value, DerivedType):
+                # TODO
+                raise NotImplementedError("Nested enums are not yet supported")
+        return this_interface_str
+
+    def __hash__(self) -> int:
+        """Return a hash value for the complex type."""
+        return super().__hash__()

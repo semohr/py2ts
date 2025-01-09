@@ -9,11 +9,15 @@ from typing import (
     Union,
     get_args,
     get_origin,
+    get_type_hints,
     is_typeddict,
 )
 
+from typing_extensions import NotRequired
+
 from .data import (
     TSArrayType,
+    TSInterface,
     TSPrimitiveType,
     TSTupleType,
     TSUnionType,
@@ -40,7 +44,21 @@ def generate_ts(py_type: Type | UnionType) -> TypescriptType:
         The TypeScript type that corresponds to the provided Python type.
     """
     if is_dataclass(py_type) or is_typeddict(py_type):
-        raise NotImplementedError("TypedDict conversion is not yet implemented")
+        print("Dataclass", py_type)
+        hints = get_type_hints(py_type, include_extras=True)
+        if hasattr(py_type, "__name__"):
+            name = py_type.__name__  # type: ignore
+        else:
+            name = "Anonymous"
+        elements = {}
+        for n, v in hints.items():
+            # Check not required
+            elements[n] = generate_ts(v)
+
+            if is_typeddict(v):
+                print("TypedDict", v)
+
+        return TSInterface(name, elements)
     else:
         return _basic_to_ts(py_type)
 
@@ -55,8 +73,16 @@ def _basic_to_ts(py_type: Type | UnionType) -> TypescriptType:
     """
     origin = get_origin(py_type)
 
+    # Not Required
+    if origin is NotRequired:
+        arg = get_args(py_type)[0]  # Only has one argument
+        type = generate_ts(arg)
+        type.not_required = True
+        print(type)
+        return type
+
     # Union Type
-    if origin is Union:
+    if origin is Union or origin is UnionType:
         args = get_args(py_type)
         return TSUnionType({generate_ts(arg) for arg in args})
 
