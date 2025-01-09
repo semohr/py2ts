@@ -1,5 +1,5 @@
 import pytest
-from py2ts.convert import convert_to_ts
+from py2ts.generate import generate_ts
 from py2ts.data import TypescriptPrimitive, TSPrimitiveType
 
 
@@ -15,7 +15,7 @@ from py2ts.data import TypescriptPrimitive, TSPrimitiveType
 )
 def test_primitive_types(py_type, expected_ts_type, expected_ts_str):
     """Test conversion of basic Python types to TypeScript."""
-    t = convert_to_ts(py_type)
+    t = generate_ts(py_type)
     assert t == expected_ts_type, f"Expected {expected_ts_type}, but got {t}"
     assert str(t) == expected_ts_str, f"Expected {expected_ts_str}, but got {str(t)}"
 

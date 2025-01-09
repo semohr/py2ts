@@ -22,7 +22,7 @@ from .data import (
 )
 
 
-def convert_to_ts(py_type: Type | UnionType) -> TypescriptType:
+def generate_ts(py_type: Type | UnionType) -> TypescriptType:
     """
     Convert a Python type to a TypeScript type.
 
@@ -42,10 +42,10 @@ def convert_to_ts(py_type: Type | UnionType) -> TypescriptType:
     if is_dataclass(py_type) or is_typeddict(py_type):
         raise NotImplementedError("TypedDict conversion is not yet implemented")
     else:
-        return _basic_cover_to_ts(py_type)
+        return _basic_to_ts(py_type)
 
 
-def _basic_cover_to_ts(py_type: Type | UnionType) -> TypescriptType:
+def _basic_to_ts(py_type: Type | UnionType) -> TypescriptType:
     """Convert a basic Python type to a TypeScript type.
 
     This shouldn't be called directly. And is a helper function for convert_to_ts.
@@ -58,17 +58,17 @@ def _basic_cover_to_ts(py_type: Type | UnionType) -> TypescriptType:
     # Union Type
     if origin is Union:
         args = get_args(py_type)
-        return TSUnionType({convert_to_ts(arg) for arg in args})
+        return TSUnionType({generate_ts(arg) for arg in args})
 
     # List/Sequence
     elif origin in [List, ABCSequence, list, Sequence]:
         arg = get_args(py_type)[0]  # Only has one argument
-        return TSArrayType(convert_to_ts(arg))
+        return TSArrayType(generate_ts(arg))
 
     # Tuple
     elif origin in [tuple, Tuple]:
         args = get_args(py_type)
-        return TSTupleType({convert_to_ts(arg) for arg in args})
+        return TSTupleType({generate_ts(arg) for arg in args})
 
     primitive = TypescriptPrimitive.from_python_type(py_type)
     if primitive:

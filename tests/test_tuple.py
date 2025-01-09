@@ -2,7 +2,7 @@ from typing import Tuple
 import pytest
 
 from py2ts.config import CONFIG
-from py2ts.convert import convert_to_ts
+from py2ts.generate import generate_ts
 from py2ts.data import TSTupleType, TSPrimitiveType, TypescriptPrimitive
 
 
@@ -46,7 +46,7 @@ def test_basic_tuple(py_types, expected_ts_type, expected_ts_str):
 
     # Test Tuple
     CONFIG["none_as_null"] = True
-    t = convert_to_ts(Tuple[py_types])
+    t = generate_ts(Tuple[py_types])
 
     assert t == expected_ts_type, f"Expected {expected_ts_type}, but got {t}"
     for ts_str in expected_ts_str:
@@ -55,7 +55,7 @@ def test_basic_tuple(py_types, expected_ts_type, expected_ts_str):
     assert len(t.elements) == len(expected_ts_str)
 
     # Test tuple (Python 3.9+ syntax)
-    t = convert_to_ts(tuple[py_types])
+    t = generate_ts(tuple[py_types])
 
     assert t == expected_ts_type, f"Expected {expected_ts_type}, but got {t}"
     for ts_str in expected_ts_str:

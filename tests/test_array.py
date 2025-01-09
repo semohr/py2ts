@@ -3,7 +3,7 @@ import pytest
 from collections.abc import Sequence as ABCSequence
 
 from py2ts.config import CONFIG
-from py2ts.convert import convert_to_ts
+from py2ts.generate import generate_ts
 from py2ts.data import TSArrayType, TSPrimitiveType, TypescriptPrimitive
 
 
@@ -42,25 +42,25 @@ def test_basic_array(py_type, expected_ts_type, expected_ts_str):
 
     # Test List
     CONFIG["none_as_null"] = True
-    t = convert_to_ts(List[py_type])
+    t = generate_ts(List[py_type])
 
     assert t == expected_ts_type, f"Expected {expected_ts_type}, but got {t}"
     assert str(t) == expected_ts_str, f"Expected {expected_ts_str}, but got {str(t)}"
 
     # Test list
-    t = convert_to_ts(list[py_type])
+    t = generate_ts(list[py_type])
 
     assert t == expected_ts_type, f"Expected {expected_ts_type}, but got {t}"
     assert str(t) == expected_ts_str, f"Expected {expected_ts_str}, but got {str(t)}"
 
     # Test sequence
-    t = convert_to_ts(Sequence[py_type])
+    t = generate_ts(Sequence[py_type])
 
     assert t == expected_ts_type, f"Expected {expected_ts_type}, but got {t}"
     assert str(t) == expected_ts_str, f"Expected {expected_ts_str}, but got {str(t)}"
 
     # Test ABCSequence
-    t = convert_to_ts(ABCSequence[py_type])
+    t = generate_ts(ABCSequence[py_type])
 
     assert t == expected_ts_type, f"Expected {expected_ts_type}, but got {t}"
     assert str(t) == expected_ts_str, f"Expected {expected_ts_str}, but got {str(t)}"
