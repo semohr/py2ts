@@ -23,7 +23,6 @@ jobs:
                   pip install .[dev]
             - name: Check style with Ruff
               run: |
-                  cd ./backend
                   ruff check --output-format=github .
     pytest:
         name: Pytest
