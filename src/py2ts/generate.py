@@ -1,3 +1,4 @@
+import enum
 from collections.abc import Sequence as ABCSequence
 from dataclasses import is_dataclass
 from types import UnionType
@@ -7,6 +8,7 @@ from typing import (
     Tuple,
     Type,
     Union,
+    cast,
     get_args,
     get_origin,
     get_type_hints,
@@ -17,6 +19,7 @@ from typing_extensions import NotRequired
 
 from .data import (
     TSArrayType,
+    TSEnumType,
     TSInterface,
     TSPrimitiveType,
     TSTupleType,
@@ -43,24 +46,40 @@ def generate_ts(py_type: Type | UnionType) -> TypescriptType:
     TypescriptType
         The TypeScript type that corresponds to the provided Python type.
     """
+    is_enum = False
+    try:
+        is_enum = issubclass(py_type, enum.Enum)  # type: ignore
+    except:
+        pass
+
     if is_dataclass(py_type) or is_typeddict(py_type):
-        print("Dataclass", py_type)
-        hints = get_type_hints(py_type, include_extras=True)
-        if hasattr(py_type, "__name__"):
-            name = py_type.__name__  # type: ignore
-        else:
-            name = "Anonymous"
-        elements = {}
-        for n, v in hints.items():
-            # Check not required
-            elements[n] = generate_ts(v)
-
-            if is_typeddict(v):
-                print("TypedDict", v)
-
-        return TSInterface(name, elements)
+        return _dictlike_to_ts(cast(Type, py_type))
+    elif is_enum:
+        return _enum_to_ts(cast(Type, py_type))
     else:
         return _basic_to_ts(py_type)
+
+
+def _dictlike_to_ts(py_type: Type):
+    hints = get_type_hints(py_type, include_extras=True)
+    if hasattr(py_type, "__name__"):
+        name = py_type.__name__  # type: ignore
+    else:
+        name = "Anonymous"
+    elements = {}
+    for n, v in hints.items():
+        elements[n] = generate_ts(v)
+    return TSInterface(name, elements)
+
+
+def _enum_to_ts(py_type: Type[enum.Enum]):
+    name = py_type.__name__
+
+    elements = {}
+    for e in py_type:
+        elements[e.name] = e.value
+
+    return TSEnumType(name, elements)
 
 
 def _basic_to_ts(py_type: Type | UnionType) -> TypescriptType:
@@ -78,7 +97,6 @@ def _basic_to_ts(py_type: Type | UnionType) -> TypescriptType:
         arg = get_args(py_type)[0]  # Only has one argument
         type = generate_ts(arg)
         type.not_required = True
-        print(type)
         return type
 
     # Union Type

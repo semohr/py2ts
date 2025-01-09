@@ -1,8 +1,7 @@
 """Data structures used in the code generation process.
 
 This module defines the data structures used to represent TypeScript types and
-interfaces, as well as the graph of interfaces that are generated from the Python
-dataclasses.
+interfaces.
 """
 
 from __future__ import annotations
@@ -11,7 +10,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from types import UnionType
-from typing import Annotated, Dict, Iterator, List, Optional, Sequence, Set
+from typing import Dict, Iterator, List, Optional, Sequence, Set
 
 from .config import CONFIG
 
@@ -286,7 +285,7 @@ class TSComplex(TypescriptType, ABC):
 
 
 @dataclass
-class TypescriptEnumType(TSComplex):
+class TSEnumType(TSComplex):
     """Represents a TypeScript enum type.
 
     Example:
@@ -304,27 +303,24 @@ class TypescriptEnumType(TSComplex):
     }
     """
 
-    keys: List[str]
-    values: Optional[List[str | int]]
+    elements: Dict[str, str | int]
 
     def __str__(self) -> str:
         """Return a string representation of the enum for use in the generated code.
 
         This method is used to generate the full enum definition.
         """
-        enum_str = f"enum {self.name}{{\n"
-        if self.values is None:
-            enum_str += ",\n\t".join(self.keys)
-        else:
-            for key, value in zip(self.keys, self.values):
-                enum_str += f"\t{key} = "
-                if isinstance(value, str):
-                    enum_str += f'"{value}",\n'
-                else:
-                    enum_str += f"{value},\n"
-            # remove last comma
-            enum_str = enum_str[:-2]
-        enum_str += "\n}"
+        enum_str = f"enum {self.name} {{\n"
+
+        for key, value in self.elements.items():
+            if isinstance(value, str):
+                enum_str += f"\t{key} = '{value}',\n"
+            elif isinstance(value, int):
+                enum_str += f"\t{key} = {value},\n"
+            else:
+                raise ValueError(f"Invalid value for enum: {value}")
+        enum_str += "}"
+
         return enum_str
 
 
@@ -341,7 +337,7 @@ class TSInterface(TSComplex):
     """
 
     name: str
-    elements: Dict[str, TypescriptType | TSInterface | TypescriptEnumType]
+    elements: Dict[str, TypescriptType | TSInterface | TSEnumType]
 
     def __str__(self) -> str:
         """Return a string representation of the interface.
