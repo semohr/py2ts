@@ -1,4 +1,6 @@
 import enum
+import inspect
+import logging
 from collections.abc import Sequence as ABCSequence
 from dataclasses import is_dataclass
 from types import UnionType
@@ -125,9 +127,18 @@ def _basic_to_ts(py_type: Type | UnionType) -> TypescriptType:
         else:
             return TSUnionType({TSLiteralType(arg) for arg in args})
 
+    # Primitive types
     primitive = TypescriptPrimitive.from_python_type(py_type)
     if primitive:
         return TSPrimitiveType(primitive)
+
+    # Generic classes
+    if inspect.isclass(py_type):
+        logging.warning(
+            "Generic classes might not be converted correctly. Please use dataclasses or TypedDicts instead!"
+        )
+        return _dictlike_to_ts(py_type)
+
     else:
         raise NotImplementedError(
             f"Conversion of type {py_type} is not yet implemented"

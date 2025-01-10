@@ -279,12 +279,7 @@ class TSComplex(TypescriptType, ABC):
 
 @dataclass
 class TSEnumType(TSComplex):
-    """Represents a TypeScript enum type.
-
-    Example:
-
-    enum Colors {
-    """
+    """Represents a TypeScript enum type."""
 
     elements: Dict[str, str | int]
 
