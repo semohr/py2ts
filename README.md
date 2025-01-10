@@ -1,6 +1,6 @@
 # py2ts
 
-Py2Ts is a Python package that generates TypeScript type definitions from Python type hints. 
+Generates TypeScript type definitions from Python type hints using the `py2ts` library.
 
 ## Features
 
