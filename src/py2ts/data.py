@@ -182,6 +182,7 @@ class TSUnionType(DerivedType):
         return " | ".join(strs)
 
     def __hash__(self) -> int:
+        """Return a hash value for the union type."""
         return super().__hash__()
 
 

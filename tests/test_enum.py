@@ -1,11 +1,9 @@
-import pytest
 from enum import Enum, auto
 from py2ts import generate_ts
 from py2ts.data import TSEnumType
 
 
 def test_basic_enum():
-
     class Colors(Enum):
         Green = 1
         Red = 2
@@ -18,7 +16,6 @@ def test_basic_enum():
 
 
 def test_with_stringValue():
-
     class Colors(Enum):
         Green = "green"
         Red = "red"
@@ -31,7 +28,6 @@ def test_with_stringValue():
 
 
 def test_with_auto():
-
     class Colors(Enum):
         Green = auto()
         Red = auto()
