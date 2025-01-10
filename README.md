@@ -1,6 +1,23 @@
-# py2ts
+<p align="center">
+    <h1 align="center">py2ts</h1>
+</p>
+<p align="center">
+    <em>TypeScript type definitions from Python type hints</em>
+</p>
 
-Generates TypeScript type definitions from Python type hints using the `py2ts` library.
+
+<p align="center">
+    <a href="https://github.com/semohr/py2ts/actions">
+        <img alt="build status" src="https://img.shields.io/github/actions/workflow/status/semohr/py2ts/workflow.yml?style=flat-square" />
+    </a>
+    <a href="https://py2ts.readthedocs.io/en/latest/">
+        <img alt="docs" src="https://img.shields.io/readthedocs/py2ts?style=flat-square" />
+    </a>
+    <a href="https://github.com/semohr/py2ts/blob/main/LICENSE">
+        <img alt="License: GPL v3" src="https://img.shields.io/badge/License-GPL%20v3-blue.svg?style=flat-square" />
+    </a>
+</p>
+
 
 ## Features
 
