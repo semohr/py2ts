@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from types import UnionType
-from typing import Dict, Iterator, List, Optional, Sequence, Set
+from typing import Any, Dict, Iterator, List, Optional, Sequence, Set
 
 from .config import CONFIG
 
@@ -41,24 +41,13 @@ class TypescriptPrimitive(Enum):
         -------
         TypescriptPrimitive | None
             The corresponding TypeScript primitive type, or `None` if no mapping exists.
-
-        Notes
-        -----
-        The mapping between Python types and TypeScript primitives is as follows:
-        - `str` -> `TypescriptPrimitive.STRING`
-        - `int` -> `TypescriptPrimitive.NUMBER`
-        - `float` -> `TypescriptPrimitive.NUMBER`
-        - `bool` -> `TypescriptPrimitive.BOOLEAN`
-        - `None` -> `TypescriptPrimitive.NULL` if `CONFIG["none_as_null"]` is `True`,
-          otherwise `TypescriptPrimitive.UNDEFINED`.
-
-        If the provided `py_type` does not match any of the above, the method returns `None`.
         """
         TYPE_MAP: dict = {
             str: TypescriptPrimitive.STRING,
             int: TypescriptPrimitive.NUMBER,
             float: TypescriptPrimitive.NUMBER,
             bool: TypescriptPrimitive.BOOLEAN,
+            Any: TypescriptPrimitive.ANY,
         }
 
         if CONFIG["none_as_null"]:
@@ -123,6 +112,25 @@ class TSPrimitiveType(TypescriptType):
     def __hash__(self) -> int:
         """Return a hash value for the primitive type."""
         return hash(self.type)
+
+
+@dataclass
+class TSLiteralType(TypescriptType):
+    """Represents a TypeScript literal type.
+
+    Example:
+    "foo"
+    """
+
+    value: Any
+
+    def __str__(self) -> str:
+        """Return a string representation of the literal type for use in the generated code."""
+        return f'"{self.value}"'
+
+    def __hash__(self) -> int:
+        """Return a hash value for the literal type."""
+        return hash(self.value)
 
 
 # ---------------------------------------------------------------------------- #
@@ -222,22 +230,6 @@ class TSTupleType(DerivedType):
 
 
 @dataclass
-class TypescriptLiteralType(DerivedType):
-    """Represents a TypeScript literal type.
-
-    Example:
-    "foo"
-    """
-
-    def __str__(self) -> str:
-        """Return a string representation of the literal type for use in the generated code."""
-        if isinstance(self.elements, Set):
-            raise NotImplementedError("Literal of multiple types is not supported!")
-
-        return f'"{self.elements}"'
-
-
-@dataclass
 class TypescriptIntersectionType(DerivedType):
     """Represents a TypeScript intersection type.
 
@@ -290,18 +282,8 @@ class TSEnumType(TSComplex):
     """Represents a TypeScript enum type.
 
     Example:
-    enum Color {
-        Red,
-        Green,
-        Blue
-    }
 
-    enum Direction {
-        Up = "UP",
-        Down = "DOWN",
-        Left = "LEFT",
-        Right = "RIGHT"
-    }
+    enum Colors {
     """
 
     elements: Dict[str, str | int]
@@ -327,15 +309,7 @@ class TSEnumType(TSComplex):
 
 @dataclass
 class TSInterface(TSComplex):
-    """Represents a TypeScript interface.
-
-    Example:
-    interface Person {
-        name: string;
-        age: number;
-        isStudent?: boolean;
-    }
-    """
+    """Represents a TypeScript interface."""
 
     name: str
     elements: Dict[str, TypescriptType | TSInterface | TSEnumType]

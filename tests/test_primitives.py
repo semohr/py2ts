@@ -1,3 +1,4 @@
+from typing import Any
 import pytest
 from py2ts.generate import generate_ts
 from py2ts.data import TypescriptPrimitive, TSPrimitiveType
@@ -11,6 +12,7 @@ from py2ts.data import TypescriptPrimitive, TSPrimitiveType
         (float, TSPrimitiveType(TypescriptPrimitive.NUMBER), "number"),
         (bool, TSPrimitiveType(TypescriptPrimitive.BOOLEAN), "boolean"),
         (type(None), TSPrimitiveType(TypescriptPrimitive.NULL), "null"),
+        (Any, TSPrimitiveType(TypescriptPrimitive.ANY), "any"),
     ],
 )
 def test_primitive_types(py_type, expected_ts_type, expected_ts_str):

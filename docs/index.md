@@ -13,3 +13,18 @@ Py2Ts is a Python package that generates TypeScript type definitions from Python
 :start-after: <!-- start features -->
 :end-before: <!-- end features -->
 ```
+
+
+## Documentation
+
+```{toctree}    
+---
+maxdepth: 1
+---
+
+quickstart
+supported
+contribution
+references
+```
+

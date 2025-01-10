@@ -4,6 +4,7 @@ from dataclasses import is_dataclass
 from types import UnionType
 from typing import (
     List,
+    Literal,
     Sequence,
     Tuple,
     Type,
@@ -21,6 +22,7 @@ from .data import (
     TSArrayType,
     TSEnumType,
     TSInterface,
+    TSLiteralType,
     TSPrimitiveType,
     TSTupleType,
     TSUnionType,
@@ -34,7 +36,8 @@ def generate_ts(py_type: Type | UnionType) -> TypescriptType:
     Convert a Python type to a TypeScript type.
 
     This function is the main entry point for converting Python types to TypeScript types.
-    It will recursively convert the type and its arguments to TypeScript types.
+    It will recursively convert the type and its arguments to TypeScript types. The returned
+    TypeScript type will be a tree of TypeScript types that represent the provided Python type.
 
     Parameters
     ----------
@@ -113,6 +116,14 @@ def _basic_to_ts(py_type: Type | UnionType) -> TypescriptType:
     elif origin in [tuple, Tuple]:
         args = get_args(py_type)
         return TSTupleType({generate_ts(arg) for arg in args})
+
+    # Literal
+    elif origin is Literal:
+        args = get_args(py_type)
+        if len(args) == 1:
+            return TSLiteralType(args[0])
+        else:
+            return TSUnionType({TSLiteralType(arg) for arg in args})
 
     primitive = TypescriptPrimitive.from_python_type(py_type)
     if primitive:

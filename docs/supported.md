@@ -21,7 +21,7 @@ generate_ts(type(None), config={"none_to_null": False}) # -> undefined
 
 ## Primitive types
 
-TODO: paragraph
+Primitive types are the most basic data types available within any programming language. These types serve as the building blocks for data manipulation. In Python and TypeScript, primitive types include simple types like strings, numbers, and booleans. They partially overlap, but there are some differences between the two languages.
 
 | Python Type       | TypeScript                     |
 |-------------------|--------------------------------|
@@ -33,10 +33,9 @@ TODO: paragraph
 | `Any`             | `any`                          |
 | `Literal["foo"]`  | `"foo"`                        |
 
-
 ## Derived 
 
-All of these types are derived types contain one or multiple subtypes and inherit from the abstract {TODO:ref} class. 
+Derived types are more complex types that are built from primitive types. They often involve collections or combinations of other types. These types include lists, tuples, sequences, and unions, which can contain multiple subtypes.
 
 | Python Type       | TypeScript                     |
 |-------------------|--------------------------------|
@@ -48,9 +47,10 @@ All of these types are derived types contain one or multiple subtypes and inheri
 | `Optional[T]`     | `T \| null` or `T \| undefined`|
 
 
+
 ## Complex 
 
-TODO: paragraph
+Complex types are advanced types that often involve custom structures or classes. These types include enums, typed dictionaries, and data classes, which can represent more sophisticated data models.
 
 | Python Type          | TypeScript Complex             |
 |----------------------|--------------------------------|
@@ -58,5 +58,4 @@ TODO: paragraph
 | `TypedDict`          | `interface`                    |
 | `DataClass`          | `interface`                    |
 | `N: NotRequired[T]`  | `N?: T`                        |
-
 
