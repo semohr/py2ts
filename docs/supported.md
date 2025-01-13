@@ -8,16 +8,15 @@ Generally the python `None` type is convertible to `null` or `undefined` in type
 but this behavior may be changed with the `none_to_null` option. 
 
 ```python
+from py2ts import generate_ts
+generate_ts(type(None)) # => "null"
+
 # Global configuration
 from py2ts.config import Config
-Config["none_to_null"] = False
+CONFIG.none_as_null = False
+generate_ts(type(None)) # => "undefined"
 ```
 
-```python
-# Pass configuration to the `generate` function
-from py2ts import generate_ts
-generate_ts(type(None), config={"none_to_null": False}) # -> undefined
-```
 
 ## Primitive types
 

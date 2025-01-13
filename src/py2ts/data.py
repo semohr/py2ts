@@ -50,7 +50,7 @@ class TypescriptPrimitive(Enum):
             Any: TypescriptPrimitive.ANY,
         }
 
-        if CONFIG["none_as_null"]:
+        if CONFIG.none_as_null:
             TYPE_MAP[type(None)] = TypescriptPrimitive.NULL
         else:
             TYPE_MAP[type(None)] = TypescriptPrimitive.UNDEFINED
@@ -288,7 +288,8 @@ class TSEnumType(TSComplex):
 
         This method is used to generate the full enum definition.
         """
-        enum_str = f"enum {self.name} {{\n"
+        prefix = "export " if CONFIG.export_interfaces else ""
+        enum_str = f"{prefix}enum {self.name} {{\n"
 
         for key, value in self.elements.items():
             if isinstance(value, str):
@@ -329,7 +330,9 @@ class TSInterface(TSComplex):
 
         This does not include nested interfaces or enums, you may need to add them manually.
         """
-        interface_str = f"interface {self.name} {{\n"
+        prefix = "export " if CONFIG.export_interfaces else ""
+
+        interface_str = f"{prefix}interface {self.name} {{\n"
 
         for key, value in self.elements.items():
             a = key

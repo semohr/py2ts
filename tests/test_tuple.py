@@ -45,7 +45,7 @@ def test_basic_tuple(py_types, expected_ts_type, expected_ts_str):
     """Test conversion of basic Python tuples to TypeScript."""
 
     # Test Tuple
-    CONFIG["none_as_null"] = True
+    CONFIG.none_as_null = True
     t = generate_ts(Tuple[py_types])
 
     assert t == expected_ts_type, f"Expected {expected_ts_type}, but got {t}"

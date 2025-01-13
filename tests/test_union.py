@@ -20,7 +20,7 @@ def test_optional_extras(config_none_as_null, py_type, expected_ts_str):
 
     Should resolve to union of the primitive type and undefined or null depending on config.
     """
-    CONFIG["none_as_null"] = config_none_as_null
+    CONFIG.none_as_null = config_none_as_null
     t = generate_ts(py_type)
 
     none_str = "null" if config_none_as_null else "undefined"
@@ -70,7 +70,7 @@ def test_concat_of_same_type(py_type, expected_ts_str):
 
     Should resolve duplicates
     """
-    CONFIG["none_as_null"] = True
+    CONFIG.none_as_null = True
     t = generate_ts(py_type)
     for ts_str in expected_ts_str:
         assert ts_str in str(t)

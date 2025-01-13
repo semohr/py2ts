@@ -7,6 +7,7 @@ from types import UnionType
 from typing import (
     List,
     Literal,
+    Optional,
     Sequence,
     Tuple,
     Type,
@@ -20,6 +21,9 @@ from typing import (
 
 from typing_extensions import NotRequired
 
+from py2ts.config import MinimalConfig
+
+from .config import CONFIG
 from .data import (
     TSArrayType,
     TSEnumType,
@@ -34,7 +38,9 @@ from .data import (
 )
 
 
-def generate_ts(py_type: Type | UnionType) -> TypescriptType:
+def generate_ts(
+    py_type: Type | UnionType, config: Optional[MinimalConfig] = None
+) -> TypescriptType:
     """
     Convert a Python type to a TypeScript type.
 
@@ -46,14 +52,23 @@ def generate_ts(py_type: Type | UnionType) -> TypescriptType:
     ----------
     py_type : Type | UnionType
         The Python type to convert to a TypeScript type.
+    config : MinimalConfig, optional
+        A dictionary with configuration options. If given, will reset all defaults!
 
     Returns
     -------
     TypescriptType
         The TypeScript type that corresponds to the provided Python type.
     """
+    # Reset config
+    if config:
+        CONFIG.__init__()
+        CONFIG.override(config)
+
+    # Reset recursion tracking
     global interfaces
     interfaces.clear()
+
     return _generate_ts(py_type)
 
 

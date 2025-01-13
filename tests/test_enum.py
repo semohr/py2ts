@@ -12,7 +12,7 @@ def test_basic_enum():
     print(ts)
 
     assert isinstance(ts, TSEnumType)
-    assert str(ts) == "enum Colors {\n\tGreen = 1,\n\tRed = 2,\n}"
+    assert str(ts) == "export enum Colors {\n\tGreen = 1,\n\tRed = 2,\n}"
 
 
 def test_with_stringValue():
@@ -24,7 +24,7 @@ def test_with_stringValue():
     print(ts)
 
     assert isinstance(ts, TSEnumType)
-    assert str(ts) == "enum Colors {\n\tGreen = 'green',\n\tRed = 'red',\n}"
+    assert str(ts) == "export enum Colors {\n\tGreen = 'green',\n\tRed = 'red',\n}"
 
 
 def test_with_auto():
@@ -36,4 +36,4 @@ def test_with_auto():
     print(ts)
 
     assert isinstance(ts, TSEnumType)
-    assert str(ts) == "enum Colors {\n\tGreen = 1,\n\tRed = 2,\n}"
+    assert str(ts) == "export enum Colors {\n\tGreen = 1,\n\tRed = 2,\n}"

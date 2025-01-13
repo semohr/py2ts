@@ -41,7 +41,7 @@ def test_basic_array(py_type, expected_ts_type, expected_ts_str):
     """Test conversion of basic Python types to TypeScript."""
 
     # Test List
-    CONFIG["none_as_null"] = True
+    CONFIG.none_as_null = True
     t = generate_ts(List[py_type])
 
     assert t == expected_ts_type, f"Expected {expected_ts_type}, but got {t}"
