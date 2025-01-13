@@ -19,14 +19,15 @@ classifiers = [
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Operating System :: OS Independent",
 ]
-dependencies = [
-    "typing-extensions",
-]
+dependencies = ["typing-extensions"]
 
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[project.scripts]
+py2ts = "py2ts.__main__:cli"
 
 
 [project.optional-dependencies]
@@ -40,6 +41,7 @@ docs = [
     "myst-parser>=4.0.0",
     "myst-nb>=1.1.2",
 ]
+cli = ["typer"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/py2ts"]
