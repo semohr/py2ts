@@ -64,7 +64,7 @@ class TypescriptPrimitive(Enum):
 
 
 def _elements_to_names(
-    elements: Sequence[TypescriptType] | Set[TypescriptType],
+    elements: Sequence[TypescriptType] | Set[TypescriptType] | Sequence[str] | Set[str],
 ) -> List[str]:
     strs: List[str] = []
     for t in elements:
@@ -303,10 +303,25 @@ class TSEnumType(TSComplex):
 
 
 @dataclass
+class TSInterfaceRef(TSComplex):
+    """Represents a TypeScript interface reference."""
+
+    def __str__(self) -> str:
+        """Return a string representation of the interface reference."""
+        return self.name
+
+    def __hash__(self) -> int:
+        """Return a hash value for the complex type."""
+        return super().__hash__()
+
+
+@dataclass
 class TSInterface(TSComplex):
     """Represents a TypeScript interface."""
 
     name: str
+
+    # If string the element is a nested interface reference (if recursive)
     elements: Dict[str, TypescriptType | TSInterface | TSEnumType]
 
     def __str__(self) -> str:
@@ -318,7 +333,8 @@ class TSInterface(TSComplex):
 
         for key, value in self.elements.items():
             a = key
-            if value.not_required:
+
+            if not isinstance(value, str) and value.not_required:
                 a += "?"
             b = _elements_to_names([value])[0]
 

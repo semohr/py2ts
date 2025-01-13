@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TypedDict
 from typing_extensions import NotRequired
 
@@ -41,18 +42,22 @@ def test_not_required():
     assert "n?: null" in str(ts)
 
 
+class InnerDict(TypedDict):
+    s: str
+
+
+class DeepDict(TypedDict):
+    deep: InnerDict | None
+
+
+class OuterDict(TypedDict):
+    nested: InnerDict
+    deep: DeepDict | None
+
+
 def test_nested():
-    class InnerDict(TypedDict):
-        s: str
-
-    class DeepDict(TypedDict):
-        deep: InnerDict | None
-
-    class OuterDict(TypedDict):
-        nested: InnerDict
-        deep: DeepDict | None
-
     ts = generate_ts(OuterDict)
+    print(ts, flush=True)
 
     # Converting the outer dict to str should only return the
     # outer dict!
@@ -68,3 +73,55 @@ def test_nested():
     assert "interface OuterDict" in full_ts
     assert "interface InnerDict" in full_ts
     assert "interface DeepDict" in full_ts
+
+
+class RecursiveDict(TypedDict):
+    s: str
+    r: RecursiveDict
+
+
+def test_recursive():
+    ts = generate_ts(RecursiveDict)
+    print(ts, flush=True)
+
+    assert "interface RecursiveDict" in str(ts)
+    assert "r: RecursiveDict" in str(ts)
+    assert "s: string" in str(ts)
+
+    assert isinstance(ts, TSInterface)
+    full_ts = ts.full_str()
+    print(full_ts, flush=True)
+    assert "interface RecursiveDict" in full_ts
+    assert "r: RecursiveDict" in full_ts
+    assert "s: string" in full_ts
+    # should only have 4 lines
+    assert len(full_ts.split("\n")) == 4
+
+
+class DeeperRecursiveDict(TypedDict):
+    s: str
+    r: DeepRecursiveDict
+
+
+class DeepRecursiveDict(TypedDict):
+    s: str
+    r: DeeperRecursiveDict
+
+
+def test_deeper_recursive():
+    ts = generate_ts(DeeperRecursiveDict)
+    print(ts, flush=True)
+
+    assert "interface DeeperRecursiveDict" in str(ts)
+    assert "r: DeepRecursiveDict" in str(ts)
+    assert "s: string" in str(ts)
+
+    assert isinstance(ts, TSInterface)
+    full_ts = ts.full_str()
+    print(full_ts, flush=True)
+    assert "interface DeeperRecursiveDict" in full_ts
+    assert "r: DeepRecursiveDict" in full_ts
+    assert "s: string" in full_ts
+    assert "interface DeepRecursiveDict" in full_ts
+    assert "r: DeeperRecursiveDict" in full_ts
+    assert "s: string" in full_ts

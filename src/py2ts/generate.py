@@ -24,6 +24,7 @@ from .data import (
     TSArrayType,
     TSEnumType,
     TSInterface,
+    TSInterfaceRef,
     TSLiteralType,
     TSPrimitiveType,
     TSTupleType,
@@ -51,6 +52,25 @@ def generate_ts(py_type: Type | UnionType) -> TypescriptType:
     TypescriptType
         The TypeScript type that corresponds to the provided Python type.
     """
+    global interfaces
+    interfaces.clear()
+    return _generate_ts(py_type)
+
+
+# Used to keep track of interfaces that have already been generated
+# to prevent infinite recursion in generating ts types.
+interfaces = set()
+
+
+def _generate_ts(py_type: Type | UnionType) -> TypescriptType:
+    """Help function to generate_ts.
+
+    This does not reset visited nodes which resolve
+    the recursion. There might be a better way to solve
+    this than recursion but it works for now.
+    """
+    global interfaces
+
     is_enum = False
     try:
         is_enum = issubclass(py_type, enum.Enum)  # type: ignore
@@ -58,7 +78,11 @@ def generate_ts(py_type: Type | UnionType) -> TypescriptType:
         pass
 
     if is_dataclass(py_type) or is_typeddict(py_type):
-        return _dictlike_to_ts(cast(Type, py_type))
+        if py_type in interfaces:
+            return TSInterfaceRef(py_type.__name__)  # type: ignore
+        interfaces.add(py_type)
+        ts_interface = _dictlike_to_ts(cast(Type, py_type))
+        return ts_interface
     elif is_enum:
         return _enum_to_ts(cast(Type, py_type))
     else:
@@ -72,8 +96,10 @@ def _dictlike_to_ts(py_type: Type):
     else:
         name = "Anonymous"
     elements = {}
+
     for n, v in hints.items():
-        elements[n] = generate_ts(v)
+        elements[n] = _generate_ts(v)
+
     return TSInterface(name, elements)
 
 
@@ -100,24 +126,24 @@ def _basic_to_ts(py_type: Type | UnionType) -> TypescriptType:
     # Not Required
     if origin is NotRequired:
         arg = get_args(py_type)[0]  # Only has one argument
-        type = generate_ts(arg)
+        type = _generate_ts(arg)
         type.not_required = True
         return type
 
     # Union Type
     if origin is Union or origin is UnionType:
         args = get_args(py_type)
-        return TSUnionType({generate_ts(arg) for arg in args})
+        return TSUnionType({_generate_ts(arg) for arg in args})
 
     # List/Sequence
     elif origin in [List, ABCSequence, list, Sequence]:
         arg = get_args(py_type)[0]  # Only has one argument
-        return TSArrayType(generate_ts(arg))
+        return TSArrayType(_generate_ts(arg))
 
     # Tuple
     elif origin in [tuple, Tuple]:
         args = get_args(py_type)
-        return TSTupleType({generate_ts(arg) for arg in args})
+        return TSTupleType({_generate_ts(arg) for arg in args})
 
     # Literal
     elif origin is Literal:
