@@ -210,6 +210,10 @@ class TSArrayType(DerivedType):
 
         return f"Array<{_elements_to_names([self.elements])[0]}>"
 
+    def __hash__(self) -> int:
+        """Return a hash value for the array type."""
+        return super().__hash__()
+
 
 @dataclass
 class TSTupleType(DerivedType):
@@ -227,6 +231,10 @@ class TSTupleType(DerivedType):
             e_names = [str(self.elements)]
 
         return f"[{', '.join(e_names)}]"
+
+    def __hash__(self) -> int:
+        """Return a hash value for the array type."""
+        return super().__hash__()
 
 
 @dataclass
@@ -249,6 +257,10 @@ class TypescriptIntersectionType(DerivedType):
             e_names = [str(self.elements)]
 
         return " & ".join(e_names)
+
+    def __hash__(self) -> int:
+        """Return a hash value for the array type."""
+        return super().__hash__()
 
 
 # ---------------------------------------------------------------------------- #
@@ -301,6 +313,10 @@ class TSEnumType(TSComplex):
         enum_str += "}"
 
         return enum_str
+
+    def __hash__(self) -> int:
+        """Return a hash value for the array type."""
+        return super().__hash__()
 
 
 @dataclass
@@ -387,5 +403,5 @@ class TSInterface(TSComplex):
         return this_interface_str
 
     def __hash__(self) -> int:
-        """Return a hash value for the complex type."""
-        return hash(self.name)
+        """Return a hash value for the array type."""
+        return super().__hash__()
