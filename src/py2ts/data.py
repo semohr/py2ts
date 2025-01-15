@@ -386,6 +386,10 @@ class TSInterface(TSComplex):
                 for key, value in element.elements.items():
                     parse_elements(value)
 
+            elif isinstance(element, TSEnumType):
+                this_interface_str = f"{element}\n\n{this_interface_str}"
+                visited.add(element)
+
             elif isinstance(element, DerivedType):
                 elements = list(element.__iter__())
                 for ele in elements:

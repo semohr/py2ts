@@ -22,7 +22,6 @@
 ## Features
 
 <!-- start features -->
-- **Type Conversion**: Automatically convert Python type hints to TypeScript type definitions using the functions provided in the py2ts.generate module.
 - **Complex Types Support**: Handle complex types such as enums and nested typed dictionaries.
 - **Comprehensive Documentation**: Access detailed documentation, including a Quickstart Guide and API Reference, to help you get started and understand the library's capabilities.
 <!-- end features -->
@@ -48,6 +47,56 @@ class Person:
 
 print(generate_ts(Person))
 ```
+This will output the following TypeScript type definition:
+```typescript
+export interface Person {
+    name: string;
+    age: number;
+}
+```
 
 Please refer to the [Quickstart Guide](https://py2ts.readthedocs.io/en/latest/quickstart.html) for more examples and detailed instructions.
+
+
+
+## Complex Types Support
+
+Py2Ts supports complex types such as enums and nested typed dictionaries. Here's an example:
+
+```python
+from __future__ import annotations
+from enum import Enum
+from typing_extensions import NotRequired
+from typing import TypedDict
+from py2ts import generate_ts
+
+class Color(Enum):
+    RED = 1
+    GREEN = "green"
+    BLUE = "blue"   
+
+class Polygon(TypedDict):
+    color: Color
+    edges: NotRequired[int]
+    children: list[Polygon] | None
+
+ts = generate_ts(Polygon)
+
+print(ts.full_str())
+```
+This will output the following TypeScript type definition:
+```typescript
+export enum Color {
+	RED = 1,
+	GREEN = 'green',
+	BLUE = 'blue',
+}
+
+export interface Polygon {
+	color: Color;
+	edges?: number;
+	children: Array<Polygon> | null;
+}
+```
+
 
