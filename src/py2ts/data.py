@@ -152,7 +152,7 @@ class DerivedType(TypescriptType, ABC):
 
     def __hash__(self) -> int:
         """Return a hash value for the derived type."""
-        if isinstance(self.elements, Set):
+        if isinstance(self.elements, Set) or isinstance(self.elements, Sequence):
             return hash(frozenset(self.elements))
         else:
             return hash(self.elements)
