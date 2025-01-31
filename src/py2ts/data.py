@@ -289,6 +289,10 @@ class TSRecordType(DerivedType):
 
         return f"Record<{', '.join(e_names)}>"
 
+    def __hash__(self) -> int:
+        """Return a hash value for the array type."""
+        return super().__hash__()
+
 
 # ---------------------------------------------------------------------------- #
 #                                 complex types                                #
