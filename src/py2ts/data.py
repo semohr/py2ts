@@ -26,6 +26,7 @@ class TypescriptPrimitive(Enum):
     UNKNOWN = "unknown"
     NEVER = "never"
     VOID = "void"
+    UINT8ARRAY = "Uint8Array"
     ANY = "any"
 
     @classmethod
@@ -47,6 +48,7 @@ class TypescriptPrimitive(Enum):
             int: TypescriptPrimitive.NUMBER,
             float: TypescriptPrimitive.NUMBER,
             bool: TypescriptPrimitive.BOOLEAN,
+            bytes: TypescriptPrimitive.UINT8ARRAY,
             Any: TypescriptPrimitive.ANY,
         }
 

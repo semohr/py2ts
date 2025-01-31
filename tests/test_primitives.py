@@ -11,6 +11,7 @@ from py2ts.data import TypescriptPrimitive, TSPrimitiveType
         (int, TSPrimitiveType(TypescriptPrimitive.NUMBER), "number"),
         (float, TSPrimitiveType(TypescriptPrimitive.NUMBER), "number"),
         (bool, TSPrimitiveType(TypescriptPrimitive.BOOLEAN), "boolean"),
+        (bytes, TSPrimitiveType(TypescriptPrimitive.UINT8ARRAY), "Uint8Array"),
         (type(None), TSPrimitiveType(TypescriptPrimitive.NULL), "null"),
         (Any, TSPrimitiveType(TypescriptPrimitive.ANY), "any"),
     ],
