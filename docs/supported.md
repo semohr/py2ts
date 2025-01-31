@@ -42,6 +42,7 @@ Derived types are more complex types that are built from primitive types. They o
 | `list[T]`         | `Array<T>`                     |
 | `tuple[T1, T2]`   | `[T1, T2]`                     |
 | `Sequence[T]`     | `Array<T>`                     |
+| `dict[K, V]`      | `Record<K, V>`                 |
 | `Union[T1, T2]`   | `T1 \| T2`                     |
 | `T1 \| T2`        | `T1 \| T2`                     |
 | `Optional[T]`     | `T \| null` or `T \| undefined`|

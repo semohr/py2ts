@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from types import UnionType
-from typing import Any, Dict, Iterator, List, Optional, Sequence, Set
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Sequence, Set
 
 from .config import CONFIG
 
@@ -145,10 +145,10 @@ class DerivedType(TypescriptType, ABC):
     """Represents a TypeScript derived type.
 
     This is an abstract class that is used as a base class for more complex types
-    such as arrays, tuples, and unions.
+    such as arrays, tuples, unions and dicts.
     """
 
-    elements: Set[TypescriptType] | TypescriptType
+    elements: Set[TypescriptType] | TypescriptType | Sequence[TypescriptType]
 
     def __hash__(self) -> int:
         """Return a hash value for the derived type."""
@@ -160,6 +160,8 @@ class DerivedType(TypescriptType, ABC):
     def __iter__(self) -> Iterator[TypescriptType]:
         """Return an iterator over the elements of the derived type."""
         if isinstance(self.elements, Set):
+            yield from self.elements
+        elif isinstance(self.elements, Sequence):
             yield from self.elements
         else:
             yield self.elements
@@ -207,7 +209,7 @@ class TSArrayType(DerivedType):
 
     def __str__(self) -> str:
         """Return a string representation of the array type for use in the generated code."""
-        if isinstance(self.elements, Set):
+        if isinstance(self.elements, Set) or isinstance(self.elements, Sequence):
             raise NotImplementedError("Array of multiple types is not supported!")
 
         return f"Array<{_elements_to_names([self.elements])[0]}>"
@@ -253,7 +255,7 @@ class TypescriptIntersectionType(DerivedType):
 
     def __str__(self) -> str:
         """Return a string representation of the intersection type for use in the generated code."""
-        if isinstance(self.elements, Set):
+        if isinstance(self.elements, Set) or isinstance(self.elements, Sequence):
             e_names = _elements_to_names(self.elements)
         else:
             e_names = [str(self.elements)]
@@ -263,6 +265,29 @@ class TypescriptIntersectionType(DerivedType):
     def __hash__(self) -> int:
         """Return a hash value for the array type."""
         return super().__hash__()
+
+
+@dataclass
+class TSRecordType(DerivedType):
+    """Represents a TypeScript record type.
+
+    Example:
+    Record<string, number>
+    """
+
+    # elements = [key, value]
+
+    def __init__(self, key: TypescriptType, value: TypescriptType) -> None:
+        super().__init__(elements=[key, value])
+
+    def __str__(self) -> str:
+        """Return a string representation of the record type for use in the generated code."""
+        if isinstance(self.elements, Set) or isinstance(self.elements, Sequence):
+            e_names = _elements_to_names(self.elements)
+        else:
+            e_names = [str(self.elements)]
+
+        return f"Record<{', '.join(e_names)}>"
 
 
 # ---------------------------------------------------------------------------- #
@@ -370,44 +395,52 @@ class TSInterface(TSComplex):
         """Return a string representation of the interface including nested interfaces and enums."""
         this_interface_str = str(self)
 
-        visited = set()
-
-        def parse_elements(element: TypescriptType):
-            """Recursively get all elements and add them to the string."""
-            nonlocal this_interface_str
-            nonlocal visited
-
-            # Early exit if already visited
-            if element in visited:
-                return
-
-            if isinstance(element, TSInterface):
-                this_interface_str = f"{element}\n\n{this_interface_str}"
-                visited.add(element)
-
-                for key, value in element.elements.items():
-                    parse_elements(value)
-
-            elif isinstance(element, TSEnumType):
-                this_interface_str = f"{element}\n\n{this_interface_str}"
-                visited.add(element)
-
-            elif isinstance(element, DerivedType):
-                elements = list(element.__iter__())
-                for ele in elements:
-                    if element in visited:
-                        continue
-
-                    parse_elements(ele)
-                    visited.add(ele)
-            else:
-                visited.add(element)
-
-        for key, value in self.elements.items():
-            parse_elements(value)
+        this_interface_str += _elements_to_full_str(self.elements.values())
 
         return this_interface_str
 
     def __hash__(self) -> int:
         """Return a hash value for the array type."""
         return super().__hash__()
+
+
+def _elements_to_full_str(elements: Iterable[TypescriptType]) -> str:
+    """Return a string representation of the interface including nested interfaces and enums."""
+    visited = set()
+    full_str = ""
+
+    def parse_elements(element: TypescriptType):
+        """Recursively get all elements and add them to the string."""
+        nonlocal full_str
+        nonlocal visited
+
+        # Early exit if already visited
+        if element in visited:
+            return
+
+        if isinstance(element, TSInterface):
+            full_str = f"{element}\n\n{full_str}"
+            visited.add(element)
+
+            for key, value in element.elements.items():
+                parse_elements(value)
+
+        elif isinstance(element, TSEnumType):
+            full_str = f"{element}\n\n{full_str}"
+            visited.add(element)
+
+        elif isinstance(element, DerivedType):
+            elements = list(element.__iter__())
+            for ele in elements:
+                if element in visited:
+                    continue
+
+                parse_elements(ele)
+                visited.add(ele)
+        else:
+            visited.add(element)
+
+    for element in elements:
+        parse_elements(element)
+
+    return full_str

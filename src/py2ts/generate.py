@@ -5,6 +5,8 @@ from collections.abc import Sequence as ABCSequence
 from dataclasses import is_dataclass
 from types import UnionType
 from typing import (
+    Any,
+    Dict,
     List,
     Literal,
     Optional,
@@ -31,6 +33,7 @@ from .data import (
     TSInterfaceRef,
     TSLiteralType,
     TSPrimitiveType,
+    TSRecordType,
     TSTupleType,
     TSUnionType,
     TypescriptPrimitive,
@@ -96,15 +99,30 @@ def _generate_ts(py_type: Type | UnionType) -> TypescriptType:
         if py_type in interfaces:
             return TSInterfaceRef(py_type.__name__)  # type: ignore
         interfaces.add(py_type)
-        ts_interface = _dictlike_to_ts(cast(Type, py_type))
+        ts_interface = _classlike_to_ts(cast(Type, py_type))
         return ts_interface
     elif is_enum:
         return _enum_to_ts(cast(Type, py_type))
+    elif _is_dict(py_type):
+        return _dict_to_ts(cast(Type[dict], py_type))
     else:
         return _basic_to_ts(py_type)
 
 
-def _dictlike_to_ts(py_type: Type):
+def _dict_to_ts(py_type: Type[dict]):
+    args = get_args(py_type)
+    if len(args) != 2:
+        # Fill with any until 2 values
+        args = list(args)
+        while len(args) < 2:
+            args.append(Any)
+
+    key_type, value_type = args
+
+    return TSRecordType(_generate_ts(key_type), _generate_ts(value_type))
+
+
+def _classlike_to_ts(py_type: Type):
     hints = get_type_hints(py_type, include_extras=True)
     if hasattr(py_type, "__name__"):
         name = py_type.__name__  # type: ignore
@@ -178,9 +196,16 @@ def _basic_to_ts(py_type: Type | UnionType) -> TypescriptType:
         logging.warning(
             "Generic classes might not be converted correctly. Please use dataclasses or TypedDicts instead!"
         )
-        return _dictlike_to_ts(py_type)
+        return _classlike_to_ts(py_type)
 
     else:
         raise NotImplementedError(
             f"Conversion of type {py_type} is not yet implemented"
         )
+
+
+def _is_dict(py_type: Type | UnionType) -> bool:
+    origin = get_origin(py_type)
+    if origin is dict or py_type is dict or origin is Dict:
+        return True
+    return False
