@@ -94,6 +94,15 @@ class TypescriptType(ABC):
         """Return a hash value for the type."""
         pass
 
+    def referenced_types(self) -> set[TypescriptType]:
+        """Get all TypeScript types required for the current type.
+
+        This method should gather all the necessary types and dependencies
+        related to the current type, aiding in understanding and organizing
+        generated code where multiple type inter-dependencies exist.
+        """
+        return set()
+
 
 @dataclass
 class TSPrimitiveType(TypescriptType):
@@ -171,6 +180,18 @@ class DerivedType(TypescriptType, ABC):
         if isinstance(self.elements, Set):
             return len(self.elements)
         return 1
+
+    def referenced_types(self) -> set[TypescriptType]:
+        """Get all TypeScript types required for the current type.
+
+        This method should gather all the necessary types and dependencies
+        related to the current type, aiding in understanding and organizing
+        generated code where multiple type inter-dependencies exist.
+        """
+        types: set[TypescriptType] = set()
+        for t in self:
+            types |= t.referenced_types()
+        return types
 
 
 @dataclass
@@ -399,7 +420,7 @@ class TSInterface(TSComplex):
         """Return a string representation of the interface including nested interfaces and enums."""
         this_interface_str = str(self)
 
-        this_interface_str += _elements_to_full_str(self.elements.values())
+        this_interface_str += ts_reference_str(self.elements.values())
 
         return this_interface_str
 
@@ -407,10 +428,46 @@ class TSInterface(TSComplex):
         """Return a hash value for the array type."""
         return super().__hash__()
 
+    def referenced_types(self) -> set[TypescriptType]:
+        """Get all TypeScript types required for the current type.
 
-def _elements_to_full_str(elements: Iterable[TypescriptType]) -> str:
-    """Return a string representation of the interface including nested interfaces and enums."""
-    visited = set()
+        This method should gather all the necessary types and dependencies
+        related to the current type, aiding in understanding and organizing
+        generated code where multiple type inter-dependencies exist.
+        """
+        types: set[TypescriptType] = set()
+        for t in self.elements.values():
+            types |= t.referenced_types()
+        return types
+
+
+def ts_reference_str(elements: Iterable[TypescriptType], ignore=[]) -> str:
+    """Return a string representation of all interfaces and enums in the elements.
+
+    Resolves nested types and returns a string representation of all interfaces and enums
+    in the elements.
+
+    Can be used to create the typescript definitions as strings when generating code.
+
+    Parameters
+    ----------
+    elements : Iterable[TypescriptType]
+        The elements to be resolved.
+    ignore : List[TypescriptType], optional
+        A list of types to ignore, by default [].
+
+    Returns
+    -------
+    str
+        The string representation of all interfaces and enums in the elements.
+    """
+    if not all([isinstance(e, (TypescriptType)) for e in elements]):
+        raise ValueError("All elements must be of type TypescriptType")
+
+    if not elements:
+        return ""
+
+    visited = set(ignore)
     full_str = ""
 
     def parse_elements(element: TypescriptType):
