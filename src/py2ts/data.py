@@ -420,7 +420,9 @@ class TSInterface(TSComplex):
         """Return a string representation of the interface including nested interfaces and enums."""
         this_interface_str = str(self)
 
-        this_interface_str += ts_reference_str(self.elements.values())
+        this_interface_str = (
+            ts_reference_str(self.elements.values()) + this_interface_str
+        )
 
         return this_interface_str
 
