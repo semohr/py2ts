@@ -9,12 +9,14 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
+from functools import total_ordering
 from types import UnionType
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Sequence, Set
 
 from .config import CONFIG
 
 
+@total_ordering
 class TypescriptPrimitive(Enum):
     """Represents a TypeScript primitive type."""
 
@@ -59,6 +61,10 @@ class TypescriptPrimitive(Enum):
 
         return TYPE_MAP.get(py_type)
 
+    def __lt__(self, other: TypescriptPrimitive) -> bool:
+        """Return whether the current primitive type is less than the other."""
+        return self.value < other.value
+
 
 # ---------------------------------------------------------------------------- #
 #                                  Primitive types                             #
@@ -74,10 +80,10 @@ def _elements_to_names(
             strs.append(t.name)
         else:
             strs.append(str(t))
-    return strs
+    return sorted(strs)
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, order=True)
 class TypescriptType(ABC):
     """Represents a TypeScript type."""
 
@@ -122,7 +128,7 @@ class TSPrimitiveType(TypescriptType):
 
     def __hash__(self) -> int:
         """Return a hash value for the primitive type."""
-        return hash(self.type)
+        return self.type.__hash__()
 
 
 @dataclass
@@ -212,7 +218,7 @@ class TSUnionType(DerivedType):
             else:
                 strs.append(str(t))
 
-        return " | ".join(strs)
+        return " | ".join(sorted(strs))
 
     def __hash__(self) -> int:
         """Return a hash value for the union type."""
