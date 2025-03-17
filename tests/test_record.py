@@ -23,7 +23,7 @@ from py2ts.data import TSPrimitiveType, TSRecordType, TypescriptPrimitive
                 TSPrimitiveType(TypescriptPrimitive.STRING),
                 TSPrimitiveType(TypescriptPrimitive.NUMBER),
             ),
-            "Record<number, string>",
+            "Record<string, number>",
         ),
         (
             Dict,
@@ -39,7 +39,7 @@ from py2ts.data import TSPrimitiveType, TSRecordType, TypescriptPrimitive
                 TSPrimitiveType(TypescriptPrimitive.STRING),
                 TSPrimitiveType(TypescriptPrimitive.NULL),
             ),
-            "Record<null, string>",
+            "Record<string, null>",
         ),
         (
             Dict[None, str],
@@ -71,4 +71,4 @@ def test_nested_record():
     t = generate_ts(Dict[str, InnerRecord])
     ts_str = str(t)
     print(ts_str, flush=True)
-    assert "Record<InnerRecord, string>" in ts_str
+    assert "Record<string, InnerRecord>" in ts_str

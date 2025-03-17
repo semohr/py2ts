@@ -73,6 +73,7 @@ class TypescriptPrimitive(Enum):
 
 def _elements_to_names(
     elements: Sequence[TypescriptType] | Set[TypescriptType] | Sequence[str] | Set[str],
+    sort: bool = True,
 ) -> List[str]:
     strs: List[str] = []
     for t in elements:
@@ -80,7 +81,11 @@ def _elements_to_names(
             strs.append(t.name)
         else:
             strs.append(str(t))
-    return sorted(strs)
+
+    if sort:
+        return sorted(strs)
+    else:
+        return strs
 
 
 @dataclass(kw_only=True, order=True)
@@ -310,7 +315,7 @@ class TSRecordType(DerivedType):
     def __str__(self) -> str:
         """Return a string representation of the record type for use in the generated code."""
         if isinstance(self.elements, Set) or isinstance(self.elements, Sequence):
-            e_names = _elements_to_names(self.elements)
+            e_names = _elements_to_names(self.elements, False)
         else:
             e_names = [str(self.elements)]
 
