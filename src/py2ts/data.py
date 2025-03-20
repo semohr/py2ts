@@ -88,7 +88,8 @@ def _elements_to_names(
         return strs
 
 
-@dataclass(kw_only=True, order=True)
+@total_ordering
+@dataclass(kw_only=True)
 class TypescriptType(ABC):
     """Represents a TypeScript type."""
 
@@ -113,6 +114,10 @@ class TypescriptType(ABC):
         generated code where multiple type inter-dependencies exist.
         """
         return set()
+
+    def __lt__(self, other: TypescriptType) -> bool:
+        """Return whether the current type is less than the other."""
+        return str(self) < str(other)
 
 
 @dataclass
@@ -514,7 +519,7 @@ def ts_reference_str(elements: Iterable[TypescriptType], ignore=[]) -> str:
         else:
             visited.add(element)
 
-    for element in elements:
+    for element in sorted(elements):
         parse_elements(element)
 
     return full_str
