@@ -435,9 +435,8 @@ class TSInterface(TSComplex):
     def full_str(self) -> str:
         """Return a string representation of the interface including nested interfaces and enums."""
         this_interface_str = str(self)
-
         this_interface_str = (
-            ts_reference_str(self.elements.values()) + this_interface_str
+            ts_reference_str(sorted(self.elements.values())) + this_interface_str
         )
 
         return this_interface_str
@@ -454,7 +453,7 @@ class TSInterface(TSComplex):
         generated code where multiple type inter-dependencies exist.
         """
         types: set[TypescriptType] = set()
-        for t in self.elements.values():
+        for t in sorted(self.elements.values()):
             types |= t.referenced_types()
         return types
 
@@ -510,7 +509,7 @@ def ts_reference_str(elements: Iterable[TypescriptType], ignore=[]) -> str:
 
         elif isinstance(element, DerivedType):
             elements = list(element.__iter__())
-            for ele in elements:
+            for ele in sorted(elements):
                 if element in visited:
                     continue
 
