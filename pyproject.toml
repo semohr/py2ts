@@ -41,7 +41,7 @@ docs = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/py2ts"]
-
+include = ["src/py2ts/py.typed"]
 
 [tool.ruff]
 include = ["pyproject.toml", "src/**/*.py", "tests/**/*.py"]
