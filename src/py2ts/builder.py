@@ -1,4 +1,6 @@
-from typing import Mapping, Self
+from typing import Mapping
+
+from typing_extensions import Self
 
 from py2ts.data import (
     DerivedType,
