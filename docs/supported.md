@@ -29,6 +29,7 @@ Primitive types are the most basic data types available within any programming l
 | `float`           | `number`                       |
 | `bool`            | `boolean`                      |
 | `bytes`           | `Uint8Array`                   |
+| `datetime`        | `Date`                         |
 | `None`            | `null` or `undefined`          |
 | `Any`             | `any`                          |
 | `Literal["foo"]`  | `"foo"`                        |

@@ -2,6 +2,7 @@ from typing import Any
 import pytest
 from py2ts.generate import generate_ts
 from py2ts.data import TypescriptPrimitive, TSPrimitiveType
+from datetime import datetime
 
 
 @pytest.mark.parametrize(
@@ -11,6 +12,7 @@ from py2ts.data import TypescriptPrimitive, TSPrimitiveType
         (int, TSPrimitiveType(TypescriptPrimitive.NUMBER), "number"),
         (float, TSPrimitiveType(TypescriptPrimitive.NUMBER), "number"),
         (bool, TSPrimitiveType(TypescriptPrimitive.BOOLEAN), "boolean"),
+        (datetime, TSPrimitiveType(TypescriptPrimitive.DATE), "Date"),
         (bytes, TSPrimitiveType(TypescriptPrimitive.UINT8ARRAY), "Uint8Array"),
         (type(None), TSPrimitiveType(TypescriptPrimitive.NULL), "null"),
         (Any, TSPrimitiveType(TypescriptPrimitive.ANY), "any"),

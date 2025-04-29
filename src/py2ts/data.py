@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from functools import total_ordering
 from types import UnionType
@@ -29,6 +30,7 @@ class TypescriptPrimitive(Enum):
     NEVER = "never"
     VOID = "void"
     UINT8ARRAY = "Uint8Array"
+    DATE = "Date"
     ANY = "any"
 
     @classmethod
@@ -52,6 +54,7 @@ class TypescriptPrimitive(Enum):
             bool: TypescriptPrimitive.BOOLEAN,
             bytes: TypescriptPrimitive.UINT8ARRAY,
             Any: TypescriptPrimitive.ANY,
+            datetime: TypescriptPrimitive.DATE,
         }
 
         if CONFIG.none_as_null:
