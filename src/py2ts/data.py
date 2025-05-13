@@ -412,7 +412,7 @@ class TSInterface(TSComplex):
     # If string the element is a nested interface reference (if recursive)
     elements: Dict[str, TypescriptType | TSInterface | TSEnumType]
 
-    inheritance: Optional[TSInterface] = None
+    inheritance: Optional[TSInterface | TSInterfaceRef] = None
 
     def __str__(self) -> str:
         """Return a string representation of the interface.
@@ -515,6 +515,9 @@ def ts_reference_str(elements: Iterable[TypescriptType], ignore=[]) -> str:
 
             for key, value in element.elements.items():
                 parse_elements(value)
+
+            if element.inheritance is not None:
+                parse_elements(element.inheritance)
 
         elif isinstance(element, TSEnumType):
             full_str = f"{element}\n\n{full_str}"

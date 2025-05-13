@@ -1,6 +1,7 @@
 import enum
 import inspect
 import logging
+from abc import ABC
 from collections.abc import Sequence as ABCSequence
 from dataclasses import is_dataclass
 from types import UnionType
@@ -139,14 +140,19 @@ def _classlike_to_ts(py_type: Type):
     bases.discard(py_type)  # need to remove the class itself
     bases.discard(object)  # need to remove the object class
     bases.discard(dict)  # need to remove the tuple class
+    bases.discard(ABC)  # need to remove the tuple class
+
     if len(bases) > 1:
         raise NotImplementedError(
-            "Multiple inheritance is not supported by typescript."
+            "Multiple inheritance is not supported by typescript. Got {len(bases)} instead: "
+            f"{', '.join([b.__name__ for b in bases])}"
         )
     if len(bases) == 1:
         base = bases.pop()
         i = _generate_ts(base)
-        assert isinstance(i, TSInterface), "Base class is not an interface"
+        assert isinstance(
+            i, (TSInterface, TSInterfaceRef)
+        ), "Base class is not an interface but a primitive type."
         inheritance = i
 
     return TSInterface(name, elements, inheritance)

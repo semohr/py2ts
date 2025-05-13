@@ -82,6 +82,8 @@ class TSBuilder:
             if isinstance(e, TSInterface):
                 for t in e.elements.values():
                     resolve_recursive(t)
+                if e.inheritance:
+                    resolve_recursive(e.inheritance)
             return
 
         for t, replace in self._elements:
