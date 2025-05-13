@@ -61,3 +61,7 @@ Complex types are advanced types that often involve custom structures or classes
 | `DataClass`          | `interface`                    |
 | `N: NotRequired[T]`  | `N?: T`                        |
 
+
+## Inheritance
+
+Inheritance should mostly work out of the box, it seems like TypeDicts implement inheritance different from normal classes, so this is not supported yet.

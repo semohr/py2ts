@@ -123,7 +123,7 @@ def _dict_to_ts(py_type: Type[dict]):
 
 
 def _classlike_to_ts(py_type: Type):
-    hints = get_type_hints(py_type, include_extras=True)
+    hints = _get_type_hints_no_inheritance(py_type)
     if hasattr(py_type, "__name__"):
         name = py_type.__name__  # type: ignore
     else:
@@ -133,7 +133,23 @@ def _classlike_to_ts(py_type: Type):
     for n, v in hints.items():
         elements[n] = _generate_ts(v)
 
-    return TSInterface(name, elements)
+    # Check inheritance
+    inheritance: TSInterface | TSInterfaceRef | None = None
+    bases = set(inspect.getmro(py_type))
+    bases.discard(py_type)  # need to remove the class itself
+    bases.discard(object)  # need to remove the object class
+    bases.discard(dict)  # need to remove the tuple class
+    if len(bases) > 1:
+        raise NotImplementedError(
+            "Multiple inheritance is not supported by typescript."
+        )
+    if len(bases) == 1:
+        base = bases.pop()
+        i = _generate_ts(base)
+        assert isinstance(i, TSInterface), "Base class is not an interface"
+        inheritance = i
+
+    return TSInterface(name, elements, inheritance)
 
 
 def _enum_to_ts(py_type: Type[enum.Enum]):
@@ -209,3 +225,15 @@ def _is_dict(py_type: Type | UnionType) -> bool:
     if origin is dict or py_type is dict or origin is Dict:
         return True
     return False
+
+
+def _get_type_hints_no_inheritance(cls: Type) -> Dict[str, Any]:
+    """Get type hints for a class excluding annotations inherited from parent classes."""
+    # Get type hints for the current class (including inherited ones)
+    all_hints = get_type_hints(cls, include_extras=True)
+
+    # Get annotations defined directly in this class (not inherited)
+    cls_annotations = cls.__dict__.get("__annotations__", {})
+
+    # Filter to keep only annotations defined in this class
+    return {k: v for k, v in all_hints.items() if k in cls_annotations}

@@ -412,6 +412,8 @@ class TSInterface(TSComplex):
     # If string the element is a nested interface reference (if recursive)
     elements: Dict[str, TypescriptType | TSInterface | TSEnumType]
 
+    inheritance: Optional[TSInterface] = None
+
     def __str__(self) -> str:
         """Return a string representation of the interface.
 
@@ -419,7 +421,10 @@ class TSInterface(TSComplex):
         """
         prefix = "export " if CONFIG.export_interfaces else ""
 
-        interface_str = f"{prefix}interface {self.name} {{\n"
+        interface_str = f"{prefix}interface {self.name}"
+        if self.inheritance is not None:
+            interface_str += f" extends {self.inheritance.name}"
+        interface_str += " {\n"
 
         for key, value in self.elements.items():
             a = key
@@ -438,9 +443,14 @@ class TSInterface(TSComplex):
     def full_str(self) -> str:
         """Return a string representation of the interface including nested interfaces and enums."""
         this_interface_str = str(self)
-        this_interface_str = (
-            ts_reference_str(sorted(self.elements.values())) + this_interface_str
-        )
+
+        refs = []
+        for v in self.elements.values():
+            refs.append(v)
+        if self.inheritance is not None:
+            refs.append(self.inheritance)
+
+        this_interface_str = ts_reference_str(sorted(refs)) + this_interface_str
 
         return this_interface_str
 
