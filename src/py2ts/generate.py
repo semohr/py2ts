@@ -1,4 +1,5 @@
 import enum
+import importlib.util
 import inspect
 import logging
 from abc import ABC
@@ -40,6 +41,8 @@ from .data import (
     TypescriptPrimitive,
     TypescriptType,
 )
+
+log = logging.getLogger("py2ts")
 
 
 def generate_ts(
@@ -142,18 +145,25 @@ def _classlike_to_ts(py_type: Type):
     bases.discard(dict)  # need to remove the tuple class
     bases.discard(ABC)  # need to remove the tuple class
 
-    if len(bases) > 1:
-        raise NotImplementedError(
-            "Multiple inheritance is not supported by typescript. Got {len(bases)} instead: "
-            f"{', '.join([b.__name__ for b in bases])}"
-        )
-    if len(bases) == 1:
-        base = bases.pop()
+    valid_bases = []
+
+    for base in bases:
         i = _generate_ts(base)
         assert isinstance(
             i, (TSInterface, TSInterfaceRef)
         ), "Base class is not an interface but a primitive type."
-        inheritance = i
+        if isinstance(i, TSInterface) and len(i.elements) == 0:
+            # Skip empty interfaces
+            continue
+        valid_bases.append(i)
+
+    if len(valid_bases) == 1:
+        inheritance = valid_bases[0]
+    elif len(valid_bases) > 1:
+        raise NotImplementedError(
+            "Multiple inheritance is not supported by typescript. "
+            f"Got {len(valid_bases)} instead: {', '.join([b.name for b in valid_bases])}"
+        )
 
     return TSInterface(name, elements, inheritance)
 
@@ -177,6 +187,10 @@ def _basic_to_ts(py_type: Type | UnionType) -> TypescriptType:
     See convert_to_ts for more information.
     """
     origin = get_origin(py_type)
+
+    if origin in _wrapper_types():
+        # If the type is just a wrapper type (e.g. sqlalchemy Mapped)
+        return _basic_to_ts(get_args(py_type)[0])
 
     # Not Required
     if origin is NotRequired:
@@ -215,7 +229,7 @@ def _basic_to_ts(py_type: Type | UnionType) -> TypescriptType:
 
     # Generic classes
     if inspect.isclass(py_type):
-        logging.warning(
+        log.info(
             "Generic classes might not be converted correctly. Please use dataclasses or TypedDicts instead!"
         )
         return _classlike_to_ts(py_type)
@@ -224,6 +238,17 @@ def _basic_to_ts(py_type: Type | UnionType) -> TypescriptType:
         raise NotImplementedError(
             f"Conversion of type {py_type} is not yet implemented"
         )
+
+
+def _wrapper_types() -> List[Type]:
+    # Unpack nested types (e.g. sqlalchemy Mapping)
+    types: list[Type] = []
+    if importlib.util.find_spec("sqlalchemy") is not None:
+        Mapped = __import__("sqlalchemy.orm").Mapped
+
+        types.append(Mapped)
+
+    return types
 
 
 def _is_dict(py_type: Type | UnionType) -> bool:

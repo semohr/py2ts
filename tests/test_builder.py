@@ -31,3 +31,25 @@ def test_builder_nested():
         ts_builder.to_str()
         == "export interface DeepDict {\n\tdeep: InnerDict | null;\n}\n\nexport interface InnerDict {\n\ts: string;\n}\n\n"
     )
+
+
+def test_builder_ts_elements():
+    class InnerDict(TypedDict):
+        s: str
+
+    class DeepDict(TypedDict):
+        deep: InnerDict | None
+
+    ts_builder = TSBuilder()
+    ts_builder.add(DeepDict)
+    ts_builder.add(InnerDict)
+
+    ts_elements = ts_builder.ts_elements
+
+    assert len(ts_elements) == 2
+    assert len(ts_builder._elements) == len(ts_elements)
+
+    assert (
+        ts_builder.to_str()
+        == "export interface DeepDict {\n\tdeep: InnerDict | null;\n}\n\nexport interface InnerDict {\n\ts: string;\n}\n\n"
+    )

@@ -1,5 +1,3 @@
-from typing import Mapping
-
 from typing_extensions import Self
 
 from py2ts.data import (
@@ -38,12 +36,17 @@ class TSBuilder:
     ```
     """
 
-    _elements: list[tuple[type, Mapping[type, type]]]
+    # Mapping of types to ts types _elements[n] <-> _ts_elements[n]
+    _elements: list[type]
+    _ts_elements: list[TypescriptType] | None = None
 
     def __init__(self):
         self._elements = []
 
-    def add(self, t: type, replace: Mapping[type, type] | None = None) -> Self:
+    def add(
+        self,
+        t: type,
+    ) -> Self:
         """Add a type to the builder.
 
         This will add the type to the list of types to be converted to TypeScript.
@@ -58,11 +61,9 @@ class TSBuilder:
             internal types with external types. Only applied to the first level of the
             dataclass or TypedDict.
         """
-        self._elements.append((t, replace or {}))
-        self._ts_elements = None
+        self._elements.append(t)
+        self._all_ts_elements = None
         return self
-
-    _ts_elements: list[TypescriptType] | None
 
     @property
     def ts_types(self) -> set[TypescriptType]:
@@ -86,12 +87,22 @@ class TSBuilder:
                     resolve_recursive(e.inheritance)
             return
 
-        for t, replace in self._elements:
+        m = []
+        for t in self._elements:
             # Resolve the types in the builder
             ts_type = generate_ts(t)
             resolve_recursive(ts_type)
+            m.append(ts_type)
 
+        self._ts_elements = m
         return elements
+
+    @property
+    def ts_elements(self) -> list[TypescriptType]:
+        """Get the types in the builder as a list."""
+        if self._ts_elements is None:
+            self.ts_types  # Trigger the generation of ts_types
+        return self._ts_elements  # type: ignore[return-value]
 
     def to_str(self) -> str:
         """Convert the builder to a string.
