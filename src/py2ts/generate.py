@@ -244,7 +244,7 @@ def _wrapper_types() -> List[Type]:
     # Unpack nested types (e.g. sqlalchemy Mapping)
     types: list[Type] = []
     if importlib.util.find_spec("sqlalchemy") is not None:
-        Mapped = __import__("sqlalchemy.orm").Mapped
+        from sqlalchemy.orm import Mapped
 
         types.append(Mapped)
 
