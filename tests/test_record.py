@@ -26,6 +26,14 @@ from py2ts.data import TSPrimitiveType, TSRecordType, TypescriptPrimitive
             "Record<string, number>",
         ),
         (
+            dict[str, str],
+            TSRecordType(
+                TSPrimitiveType(TypescriptPrimitive.STRING),
+                TSPrimitiveType(TypescriptPrimitive.STRING),
+            ),
+            "Record<string, string>",
+        ),
+        (
             Dict,
             TSRecordType(
                 TSPrimitiveType(TypescriptPrimitive.ANY),

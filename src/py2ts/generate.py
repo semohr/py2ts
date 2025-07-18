@@ -190,7 +190,7 @@ def _basic_to_ts(py_type: Type | UnionType) -> TypescriptType:
 
     if origin in _wrapper_types():
         # If the type is just a wrapper type (e.g. sqlalchemy Mapped)
-        return _basic_to_ts(get_args(py_type)[0])
+        return _generate_ts(get_args(py_type)[0])
 
     # Not Required
     if origin is NotRequired:
