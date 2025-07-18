@@ -5,9 +5,10 @@ from py2ts.builder import TSBuilder
 def test_basic_builder():
     class StringDict(TypedDict):
         s: str
+        e: int
 
     ts_builder = TSBuilder()
-    ts_builder.add(StringDict)
+    ts_builder.add(StringDict, exclude={"e"})
 
     assert len(ts_builder._elements) == 1
 

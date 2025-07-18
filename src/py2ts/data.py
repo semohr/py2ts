@@ -14,6 +14,8 @@ from functools import total_ordering
 from types import UnionType
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Sequence, Set
 
+from typing_extensions import Self
+
 from .config import CONFIG
 
 
@@ -359,6 +361,21 @@ class TSComplex(TypescriptType, ABC):
         """Return a hash value for the complex type."""
         return hash(self.name)
 
+    def exclude(self, exclude: set[str]) -> Self:
+        """Exclude fields from the type.
+
+        Parameters
+        ----------
+        exclude : set[str]
+            A set of field names to exclude from the TypeScript interface.
+
+        Returns
+        -------
+        TypescriptType
+            The modified type with the excluded fields.
+        """
+        return self
+
 
 @dataclass
 class TSEnumType(TSComplex):
@@ -388,6 +405,22 @@ class TSEnumType(TSComplex):
     def __hash__(self) -> int:
         """Return a hash value for the array type."""
         return super().__hash__()
+
+    def exclude(self, exclude: set[str]) -> TSEnumType:
+        """Exclude fields from the enum type.
+
+        Parameters
+        ----------
+        exclude : set[str]
+            A set of field names to exclude from the TypeScript enum.
+
+        Returns
+        -------
+        TypescriptType
+            The modified enum type with the excluded fields.
+        """
+        new_elements = {k: v for k, v in self.elements.items() if k not in exclude}
+        return TSEnumType(name=self.name, elements=new_elements)
 
 
 @dataclass
@@ -469,6 +502,25 @@ class TSInterface(TSComplex):
         for t in sorted(self.elements.values()):
             types |= t.referenced_types()
         return types
+
+    def exclude(self, exclude: set[str]) -> TSInterface:
+        """Exclude fields from the enum type.
+
+        Parameters
+        ----------
+        exclude : set[str]
+            A set of field names to exclude from the TypeScript enum.
+
+        Returns
+        -------
+        TypescriptType
+            The modified enum type with the excluded fields.
+        """
+        return TSInterface(
+            name=self.name,
+            elements={k: v for k, v in self.elements.items() if k not in exclude},
+            inheritance=self.inheritance.exclude(exclude) if self.inheritance else None,
+        )
 
 
 def ts_reference_str(elements: Iterable[TypescriptType], ignore=[]) -> str:

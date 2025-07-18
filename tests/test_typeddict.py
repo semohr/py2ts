@@ -2,18 +2,19 @@ from __future__ import annotations
 from typing import TypedDict
 from typing_extensions import NotRequired
 
-from py2ts.data import TSInterface
+from py2ts.data import TSComplex, TSInterface
 from py2ts.generate import generate_ts
 
 
-def test_base_types():
-    class StringDict(TypedDict):
-        s: str
-        i: int
-        f: float
-        b: bool
-        n: None
+class StringDict(TypedDict):
+    s: str
+    i: int
+    f: float
+    b: bool
+    n: None
 
+
+def test_base_types():
     ts = generate_ts(StringDict)
 
     assert "interface StringDict" in str(ts)
@@ -24,14 +25,26 @@ def test_base_types():
     assert "n: null" in str(ts)
 
 
-def test_not_required():
-    class NotRequiredDict(TypedDict):
-        s: NotRequired[str]
-        i: NotRequired[int]
-        f: NotRequired[float]
-        b: NotRequired[bool]
-        n: NotRequired[None]
+def test_exclude():
+    ts = generate_ts(StringDict)
 
+    assert isinstance(ts, TSComplex)
+    ts = ts.exclude({"s", "i"})
+
+    assert "interface StringDict" in str(ts)
+    assert "s: string" not in str(ts)
+    assert "i: number" not in str(ts)
+
+
+class NotRequiredDict(TypedDict):
+    s: NotRequired[str]
+    i: NotRequired[int]
+    f: NotRequired[float]
+    b: NotRequired[bool]
+    n: NotRequired[None]
+
+
+def test_not_required():
     ts = generate_ts(NotRequiredDict)
 
     assert "interface NotRequiredDict" in str(ts)
