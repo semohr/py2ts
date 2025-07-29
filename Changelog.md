@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.1]
+
+### Fixed
+
+- Support for edge cases in TypeScript interface generation, specifically when an interface has no elements but inherits from another type. This ensures that the generated TypeScript code is valid and does not produce empty interfaces.
 
 ## [0.4.0] 
 

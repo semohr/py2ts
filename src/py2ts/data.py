@@ -454,6 +454,10 @@ class TSInterface(TSComplex):
         """
         prefix = "export " if CONFIG.export_interfaces else ""
 
+        # Edge case: empty interface with inheritance
+        if len(self.elements) == 0 and self.inheritance is not None:
+            return f"{prefix}type {self.name} = {self.inheritance.name};\n"
+
         interface_str = f"{prefix}interface {self.name}"
         if self.inheritance is not None:
             interface_str += f" extends {self.inheritance.name}"

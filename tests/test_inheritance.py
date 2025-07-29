@@ -83,3 +83,21 @@ def test_full_str():
     assert isinstance(ts, TSInterface)
     assert "interface Bar" in ts.full_str()
     assert "interface Foo" in ts.full_str()
+
+
+def test_inheritance_empty():
+    from dataclasses import dataclass
+
+    @dataclass
+    class Bar:
+        bar: str
+
+    @dataclass
+    class Foo(Bar):
+        pass
+
+    ts = generate_ts(Foo)
+    print(ts)
+    assert isinstance(ts, TSInterface)
+    assert ts.inheritance is not None
+    assert str(ts) == "export type Foo = Bar;\n"
