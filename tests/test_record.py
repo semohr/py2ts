@@ -12,10 +12,10 @@ from py2ts.data import TSPrimitiveType, TSRecordType, TypescriptPrimitive
         (
             dict,
             TSRecordType(
-                TSPrimitiveType(TypescriptPrimitive.ANY),
-                TSPrimitiveType(TypescriptPrimitive.ANY),
+                TSPrimitiveType(TypescriptPrimitive.UNKNOWN),
+                TSPrimitiveType(TypescriptPrimitive.UNKNOWN),
             ),
-            "Record<any, any>",
+            "Record<unknown, unknown>",
         ),
         (
             dict[str, int],
@@ -36,10 +36,10 @@ from py2ts.data import TSPrimitiveType, TSRecordType, TypescriptPrimitive
         (
             Dict,
             TSRecordType(
-                TSPrimitiveType(TypescriptPrimitive.ANY),
-                TSPrimitiveType(TypescriptPrimitive.ANY),
+                TSPrimitiveType(TypescriptPrimitive.UNKNOWN),
+                TSPrimitiveType(TypescriptPrimitive.UNKNOWN),
             ),
-            "Record<any, any>",
+            "Record<unknown, unknown>",
         ),
         (
             Dict[str, None],

@@ -18,6 +18,19 @@ generate_ts(type(None)) # => "undefined"
 ```
 
 
+The `Any` type is convertible to `unknown` by default, if you want to use `any` instead, you can change this behavior with the `any_as_unknown` option.
+
+```python
+from py2ts import generate_ts
+from typing import Any
+generate_ts(Any) # => "unknown"
+
+from py2ts.config import Config
+CONFIG.any_as_unknown = False
+generate_ts(Any) # => "any"
+```
+
+
 ## Primitive types
 
 Primitive types are the most basic data types available within any programming language. These types serve as the building blocks for data manipulation. In Python and TypeScript, primitive types include simple types like strings, numbers, and booleans. They partially overlap, but there are some differences between the two languages.
@@ -31,7 +44,7 @@ Primitive types are the most basic data types available within any programming l
 | `bytes`           | `Uint8Array`                   |
 | `datetime`        | `Date`                         |
 | `None`            | `null` or `undefined`          |
-| `Any`             | `any`                          |
+| `Any`             | `unknown` or `any`             |
 | `Literal["foo"]`  | `"foo"`                        |
 
 ## Derived 

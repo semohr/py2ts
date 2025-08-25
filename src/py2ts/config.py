@@ -19,6 +19,9 @@ class MinimalConfig(TypedDict):
     # Add "export" keyword to generated interfaces and enums
     export_interfaces: NotRequired[bool]
 
+    # Any as unknown
+    any_as_unknown: NotRequired[bool]
+
 
 @dataclass
 class Config:
@@ -34,6 +37,9 @@ class Config:
     # Add "export" keyword to generated interfaces and enums
     export_interfaces: bool = True
 
+    # Any as unknown
+    any_as_unknown: bool = True
+
     def override(self, config: MinimalConfig) -> Config:
         """Override the configuration with the provided configuration."""
         return Config(
@@ -42,6 +48,7 @@ class Config:
             ),
             none_as_null=config.get("none_as_null", self.none_as_null),
             export_interfaces=config.get("export_interfaces", self.export_interfaces),
+            any_as_unknown=config.get("any_as_unknown", self.any_as_unknown),
         )
 
 

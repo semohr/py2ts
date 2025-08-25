@@ -64,6 +64,11 @@ class TypescriptPrimitive(Enum):
         else:
             TYPE_MAP[type(None)] = TypescriptPrimitive.UNDEFINED
 
+        if CONFIG.any_as_unknown:
+            TYPE_MAP[Any] = TypescriptPrimitive.UNKNOWN
+        else:
+            TYPE_MAP[Any] = TypescriptPrimitive.ANY
+
         return TYPE_MAP.get(py_type)
 
     def __lt__(self, other: TypescriptPrimitive) -> bool:

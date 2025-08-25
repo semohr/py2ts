@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0]
+
+- Add any_as_unknown config option to use `unknown` instead of `any` for the `Any` type from Python. This is now the default behavior [#2](https://github.com/semohr/py2ts/issues/2).
+
 ## [0.4.1]
 
 ### Fixed

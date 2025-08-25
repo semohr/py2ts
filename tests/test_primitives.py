@@ -15,7 +15,8 @@ from datetime import datetime
         (datetime, TSPrimitiveType(TypescriptPrimitive.DATE), "Date"),
         (bytes, TSPrimitiveType(TypescriptPrimitive.UINT8ARRAY), "Uint8Array"),
         (type(None), TSPrimitiveType(TypescriptPrimitive.NULL), "null"),
-        (Any, TSPrimitiveType(TypescriptPrimitive.ANY), "any"),
+        # Any is converted to unknown by default
+        (Any, TSPrimitiveType(TypescriptPrimitive.UNKNOWN), "unknown"),
     ],
 )
 def test_primitive_types(py_type, expected_ts_type, expected_ts_str):
@@ -23,6 +24,17 @@ def test_primitive_types(py_type, expected_ts_type, expected_ts_str):
     t = generate_ts(py_type)
     assert t == expected_ts_type, f"Expected {expected_ts_type}, but got {t}"
     assert str(t) == expected_ts_str, f"Expected {expected_ts_str}, but got {str(t)}"
+
+
+def test_any_as_any():
+    """Test that Any is converted to 'any' when configured."""
+    from py2ts.config import CONFIG
+
+    CONFIG.any_as_unknown = False
+    t = generate_ts(Any)  # type: ignore
+    assert t == TSPrimitiveType(TypescriptPrimitive.ANY)
+    assert str(t) == "any"
+    CONFIG.any_as_unknown = True
 
 
 def test_hashes():
