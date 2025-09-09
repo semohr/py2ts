@@ -78,3 +78,18 @@ Complex types are advanced types that often involve custom structures or classes
 ## Inheritance
 
 Inheritance should mostly work out of the box, it seems like TypeDicts implement inheritance different from normal classes, so this is not supported yet.
+
+
+## Indent Style
+
+By default, py2ts uses tabs for indentation in the generated TypeScript code. If you prefer to use spaces instead, you can configure this behavior using the `indent_with_tabs` and `indent_size` options in the configuration.
+
+```python
+from py2ts.config import CONFIG
+from py2ts import generate_ts
+
+CONFIG.indent_with_tabs = False  # Use spaces for indentation
+CONFIG.indent_size = 2           # Set the number of spaces per indentation level
+
+generate_ts(your_python_type)  # The generated TypeScript code will use spaces for indentation
+```

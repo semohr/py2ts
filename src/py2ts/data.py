@@ -398,9 +398,9 @@ class TSEnumType(TSComplex):
 
         for key, value in self.elements.items():
             if isinstance(value, str):
-                enum_str += f"\t{key} = '{value}',\n"
+                enum_str += f"{CONFIG.TAB}{key} = '{value}',\n"
             elif isinstance(value, int):
-                enum_str += f"\t{key} = {value},\n"
+                enum_str += f"{CONFIG.TAB}{key} = {value},\n"
             else:
                 raise ValueError(f"Invalid value for enum: {value}")
         enum_str += "}"
@@ -476,7 +476,7 @@ class TSInterface(TSComplex):
             b = _elements_to_names([value])[0]
 
             # add the type to the interface
-            interface_str += f"\t{a}: {b};\n"
+            interface_str += f"{CONFIG.TAB}{a}: {b};\n"
 
         interface_str += "}"
 
