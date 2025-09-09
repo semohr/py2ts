@@ -28,10 +28,10 @@
 
 ## Installation
 
-You can install Py2Ts from git directly using pip:
+You can install Py2Ts from pypi directly using pip:
 
 ```bash
-pip install git+https://github.com/semohr/py2ts.git
+pip install python2ts
 ```
 
 ## Quickstart
