@@ -106,6 +106,46 @@ def _generate_ts(
     """
     global interfaces
 
+    # Pydantic materializes parametrized generic models as real classes
+    # (e.g. ResourceIdentifier[T_I]). Convert them to a reference to their
+    # origin class carrying the type arguments (e.g. ResourceIdentifier<T_I>).
+    pydantic_metadata = getattr(py_type, "__pydantic_generic_metadata__", None)
+    if pydantic_metadata is not None and pydantic_metadata["origin"] is not None:
+        origin = pydantic_metadata["origin"]
+        args = pydantic_metadata.get("args") or ()
+        if args:
+            target = interfaces.get(origin)
+            if target is None:
+                converted = _generate_ts(origin, context)
+                if isinstance(converted, TSInterfaceRef):
+                    # The origin resolved to a self-instantiation (its type
+                    # parameters are in scope); reuse that reference.
+                    return converted
+                assert isinstance(converted, TSInterface)
+                target = converted
+            return TSInterfaceRef(
+                target.name,
+                type_args=tuple(_generate_ts(a, context) for a in args),
+                definition=target,
+            )
+        py_type = origin
+
+    # Pydantic collapses instantiations with the model's own type parameters
+    # to the identity class (e.g. ResourceIdentifier[T_I] == ResourceIdentifier
+    # in pydantic >= 2.12), losing the arguments. Recover them when all
+    # parameters are type parameters of the enclosing generic class.
+    if pydantic_metadata is not None and pydantic_metadata["origin"] is None:
+        params = pydantic_metadata.get("parameters") or ()
+        param_names = tuple(getattr(p, "__name__", str(p)) for p in params)
+        if param_names and all(n in context for n in param_names):
+            definition = interfaces.get(cast("type", py_type))
+            if definition is None:
+                definition = _classlike_to_ts(cast("type", py_type))
+            return TSInterfaceRef(
+                definition.name,
+                type_args=tuple(TSTypeParameterRef(n) for n in param_names),
+                definition=definition,
+            )
 
     is_enum = False
     try:
