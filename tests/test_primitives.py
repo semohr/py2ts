@@ -37,6 +37,18 @@ def test_any_as_any():
     CONFIG.any_as_unknown = True
 
 
+def test_annotated_unwrapped():
+    """Annotated metadata is stripped, only the inner type remains."""
+    from typing import Annotated
+
+    assert str(generate_ts(Annotated[int, "some metadata"])) == "number"
+
+
+def test_config_override():
+    """A config passed to generate_ts overrides the defaults."""
+    assert str(generate_ts(type(None), config={"none_as_null": True})) == "null"
+
+
 def test_hashes():
     """Test hash values of primitive types."""
     t = []

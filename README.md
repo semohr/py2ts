@@ -23,6 +23,7 @@
 
 <!-- start features -->
 - **Complex Types Support**: Handle complex types such as enums and nested typed dictionaries.
+- **Generic Types Support**: Convert Python generics (`TypeVar`s, bounded parameters, parametrized references) to TypeScript generics, including recursive and pydantic models.
 - **Comprehensive Documentation**: Access detailed documentation, including a Quickstart Guide and API Reference, to help you get started and understand the library's capabilities.
 <!-- end features -->
 
@@ -98,5 +99,38 @@ export interface Polygon {
 	children: Array<Polygon> | null;
 }
 ```
+
+
+## Generic Types Support
+
+Py2Ts converts Python generic classes to TypeScript generics. Type parameters, bounds,
+parametrized references and recursive generics are supported:
+
+```python
+from typing import Generic, TypeVar
+from dataclasses import dataclass
+from py2ts import generate_ts
+
+T = TypeVar("T")
+
+@dataclass
+class Node(Generic[T]):
+    value: T
+    next: "Node[T] | None" = None
+
+print(generate_ts(Node).full_str())
+```
+
+```typescript
+export interface Node<T> {
+	value: T;
+	next: Node<T> | null;
+}
+```
+
+Bounded type parameters render as `T extends ...` (e.g. `TypeVar("T", bound=str)` becomes
+`T extends string`), and instantiations keep their type arguments (e.g. `Node[str]` becomes
+`Node<string>`). Pydantic generic models are supported as well. See the
+[Supported Types](https://py2ts.readthedocs.io/en/latest/supported.html) page for details.
 
 

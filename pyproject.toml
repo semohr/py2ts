@@ -30,7 +30,7 @@ dev = [
   { include-group = "typed" },
   "pre-commit>=4.5.1",
 ]
-test = ["pytest>=9.0.2", "pytest-cov>=7.0.0"]
+test = ["pytest>=9.0.2", "pytest-cov>=7.0.0", "pydantic>=2.12"]
 lint = ["ruff>=0.16.4"]
 docs = [
   "sphinx>=8.0.2",
