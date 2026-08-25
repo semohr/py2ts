@@ -62,9 +62,13 @@ class Config:
         )
 
     @property
-    def TAB(self):
+    def tab(self):
         """Return the indentation string based on the configuration."""
         return "\t" if self.indent_with_tabs else " " * self.indent_size
+
+    def reset(self) -> None:
+        """Reset the configuration to the default values."""
+        self.__dict__.update(Config().__dict__)
 
 
 CONFIG = Config()

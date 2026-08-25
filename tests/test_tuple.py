@@ -1,4 +1,3 @@
-from typing import Tuple
 import pytest
 
 from py2ts.config import CONFIG
@@ -46,7 +45,7 @@ def test_basic_tuple(py_types, expected_ts_type, expected_ts_str):
 
     # Test Tuple
     CONFIG.none_as_null = True
-    t = generate_ts(Tuple[py_types])
+    t = generate_ts(tuple[py_types])
 
     assert t == expected_ts_type, f"Expected {expected_ts_type}, but got {t}"
     for ts_str in expected_ts_str:

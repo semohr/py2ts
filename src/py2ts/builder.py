@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 from typing_extensions import Self
 
@@ -64,8 +65,8 @@ class TSBuilder:
         type : type
             The type to be added. This can be a dataclass, TypedDict or TSInterface.
         exclude : set[str] | None, optional
-            A set of field names to exclude from the TypeScript interface. This is only used for
-            TypedDicts and dataclasses. If None, all fields will be included.
+            A set of field names to exclude from the TypeScript interface. This is only
+            used for TypedDicts and dataclasses. If None, all fields will be included.
         """
         self._elements.append(t)
         self._exclude.append(exclude or set())
@@ -104,7 +105,8 @@ class TSBuilder:
                 ts_type = ts_type.exclude(e)
             elif len(e) > 0:
                 log.warning(
-                    f"Excluding fields {e} from {type(ts_type)} is not supported, skipping."
+                    f"""Excluding fields {e} from {type(ts_type)} is currently not
+                    supported, skipping."""
                 )
 
             resolve_recursive(ts_type)
@@ -132,6 +134,6 @@ class TSBuilder:
 
     def save_file(self, filename: str) -> None:
         """Convert the types in the builder to TypeScript and save them to a file."""
-        with open(filename, "w") as f:
+        with Path(filename).open() as f:
             f.write(prefix)
             f.write(self.to_str())

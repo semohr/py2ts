@@ -1,20 +1,18 @@
+from __future__ import annotations
+
 import enum
 import importlib.util
 import inspect
 import logging
 from abc import ABC
+from collections.abc import Sequence
 from collections.abc import Sequence as ABCSequence
 from dataclasses import is_dataclass
 from types import UnionType
 from typing import (
+    TYPE_CHECKING,
     Any,
-    Dict,
-    List,
     Literal,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
     Union,
     cast,
     get_args,
@@ -24,8 +22,6 @@ from typing import (
 )
 
 from typing_extensions import NotRequired
-
-from py2ts.config import MinimalConfig
 
 from .config import CONFIG
 from .data import (
@@ -42,18 +38,24 @@ from .data import (
     TypescriptType,
 )
 
+if TYPE_CHECKING:
+    from py2ts.config import MinimalConfig
+
 log = logging.getLogger("py2ts")
 
 
 def generate_ts(
-    py_type: Type | UnionType, config: Optional[MinimalConfig] = None
+    py_type: type | UnionType, config: MinimalConfig | None = None
 ) -> TypescriptType:
     """
     Convert a Python type to a TypeScript type.
 
-    This function is the main entry point for converting Python types to TypeScript types.
-    It will recursively convert the type and its arguments to TypeScript types. The returned
-    TypeScript type will be a tree of TypeScript types that represent the provided Python type.
+    This function is the main entry point for converting Python types to
+    TypeScript types.
+    It will recursively convert the type and its arguments to TypeScript types.
+    The returned
+    TypeScript type will be a tree of TypeScript types that represent the provided
+    Python type.
 
     Parameters
     ----------
@@ -69,7 +71,7 @@ def generate_ts(
     """
     # Reset config
     if config:
-        CONFIG.__init__()
+        CONFIG.reset()
         CONFIG.override(config)
 
     # Reset recursion tracking
@@ -81,10 +83,10 @@ def generate_ts(
 
 # Used to keep track of interfaces that have already been generated
 # to prevent infinite recursion in generating ts types.
-interfaces = set()
+interfaces: set[Any] = set()
 
 
-def _generate_ts(py_type: Type | UnionType) -> TypescriptType:
+def _generate_ts(py_type: type | UnionType) -> TypescriptType:
     """Help function to generate_ts.
 
     This does not reset visited nodes which resolve
@@ -96,28 +98,27 @@ def _generate_ts(py_type: Type | UnionType) -> TypescriptType:
     is_enum = False
     try:
         is_enum = issubclass(py_type, enum.Enum)  # type: ignore
-    except:
+    except Exception:
         pass
 
     if is_dataclass(py_type) or is_typeddict(py_type):
         if py_type in interfaces:
             return TSInterfaceRef(py_type.__name__)  # type: ignore
         interfaces.add(py_type)
-        ts_interface = _classlike_to_ts(cast(Type, py_type))
+        ts_interface = _classlike_to_ts(cast("type", py_type))
         return ts_interface
     elif is_enum:
-        return _enum_to_ts(cast(Type, py_type))
+        return _enum_to_ts(cast("type", py_type))
     elif _is_dict(py_type):
-        return _dict_to_ts(cast(Type[dict], py_type))
+        return _dict_to_ts(cast("type[dict]", py_type))
     else:
         return _basic_to_ts(py_type)
 
 
-def _dict_to_ts(py_type: Type[dict]):
-    args = get_args(py_type)
+def _dict_to_ts(py_type: type[dict]):
+    args = list(get_args(py_type))
     if len(args) != 2:
         # Fill with any until 2 values
-        args = list(args)
         while len(args) < 2:
             args.append(Any)
 
@@ -126,7 +127,7 @@ def _dict_to_ts(py_type: Type[dict]):
     return TSRecordType(_generate_ts(key_type), _generate_ts(value_type))
 
 
-def _classlike_to_ts(py_type: Type):
+def _classlike_to_ts(py_type: type):
     hints = _get_type_hints_no_inheritance(py_type)
     if hasattr(py_type, "__name__"):
         name = py_type.__name__  # type: ignore
@@ -149,9 +150,9 @@ def _classlike_to_ts(py_type: Type):
 
     for base in bases:
         i = _generate_ts(base)
-        assert isinstance(
-            i, (TSInterface, TSInterfaceRef)
-        ), "Base class is not an interface but a primitive type."
+        assert isinstance(i, (TSInterface, TSInterfaceRef)), (
+            "Base class is not an interface but a primitive type."
+        )
         if isinstance(i, TSInterface) and len(i.elements) == 0:
             # Skip empty interfaces
             continue
@@ -162,13 +163,14 @@ def _classlike_to_ts(py_type: Type):
     elif len(valid_bases) > 1:
         raise NotImplementedError(
             "Multiple inheritance is not supported by typescript. "
-            f"Got {len(valid_bases)} instead: {', '.join([b.name for b in valid_bases])}"
+            f"Got {len(valid_bases)} instead: "
+            f"{', '.join([b.name for b in valid_bases])}"
         )
 
     return TSInterface(name, elements, inheritance)
 
 
-def _enum_to_ts(py_type: Type[enum.Enum]):
+def _enum_to_ts(py_type: type[enum.Enum]):
     name = py_type.__name__
 
     elements = {}
@@ -178,7 +180,7 @@ def _enum_to_ts(py_type: Type[enum.Enum]):
     return TSEnumType(name, elements)
 
 
-def _basic_to_ts(py_type: Type | UnionType) -> TypescriptType:
+def _basic_to_ts(py_type: type | UnionType) -> TypescriptType:
     """Convert a basic Python type to a TypeScript type.
 
     This shouldn't be called directly. And is a helper function for convert_to_ts.
@@ -205,12 +207,12 @@ def _basic_to_ts(py_type: Type | UnionType) -> TypescriptType:
         return TSUnionType({_generate_ts(arg) for arg in args})
 
     # List/Sequence
-    elif origin in [List, ABCSequence, list, Sequence]:
+    elif origin in [list, ABCSequence, list, Sequence]:
         arg = get_args(py_type)[0]  # Only has one argument
         return TSArrayType(_generate_ts(arg))
 
     # Tuple
-    elif origin in [tuple, Tuple]:
+    elif origin in [tuple, tuple]:
         args = get_args(py_type)
         return TSTupleType({_generate_ts(arg) for arg in args})
 
@@ -230,7 +232,8 @@ def _basic_to_ts(py_type: Type | UnionType) -> TypescriptType:
     # Generic classes
     if inspect.isclass(py_type):
         log.info(
-            "Generic classes might not be converted correctly. Please use dataclasses or TypedDicts instead!"
+            "Generic classes might not be converted correctly. Please use "
+            "dataclasses or TypedDicts instead!"
         )
         return _classlike_to_ts(py_type)
 
@@ -240,9 +243,9 @@ def _basic_to_ts(py_type: Type | UnionType) -> TypescriptType:
         )
 
 
-def _wrapper_types() -> List[Type]:
+def _wrapper_types() -> list[type]:
     # Unpack nested types (e.g. sqlalchemy Mapping)
-    types: list[Type] = []
+    types: list[type] = []
     if importlib.util.find_spec("sqlalchemy") is not None:
         from sqlalchemy.orm import Mapped
 
@@ -251,20 +254,23 @@ def _wrapper_types() -> List[Type]:
     return types
 
 
-def _is_dict(py_type: Type | UnionType) -> bool:
+def _is_dict(py_type: type | UnionType) -> bool:
     origin = get_origin(py_type)
-    if origin is dict or py_type is dict or origin is Dict:
+    if origin is dict or py_type is dict or origin is dict:
         return True
     return False
 
 
-def _get_type_hints_no_inheritance(cls: Type) -> Dict[str, Any]:
-    """Get type hints for a class excluding annotations inherited from parent classes."""
+def _get_type_hints_no_inheritance(cls: type) -> dict[str, Any]:
+    """Get type hints for a class excluding inherited annotations.
+
+    Excludes annotations inherited from parent classes.
+    """
     # Get type hints for the current class (including inherited ones)
     all_hints = get_type_hints(cls, include_extras=True)
 
     # Get annotations defined directly in this class (not inherited)
-    cls_annotations = cls.__dict__.get("__annotations__", {})
+    cls_annotations = inspect.get_annotations(cls) or {}
 
     # Filter to keep only annotations defined in this class
     return {k: v for k, v in all_hints.items() if k in cls_annotations}

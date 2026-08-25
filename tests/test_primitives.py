@@ -23,7 +23,7 @@ def test_primitive_types(py_type, expected_ts_type, expected_ts_str):
     """Test conversion of basic Python types to TypeScript."""
     t = generate_ts(py_type)
     assert t == expected_ts_type, f"Expected {expected_ts_type}, but got {t}"
-    assert str(t) == expected_ts_str, f"Expected {expected_ts_str}, but got {str(t)}"
+    assert str(t) == expected_ts_str, f"Expected {expected_ts_str}, but got {t!s}"
 
 
 def test_any_as_any():

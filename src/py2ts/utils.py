@@ -1,5 +1,9 @@
-from types import UnionType
-from typing import List, Union, get_args, get_origin
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Union, get_args, get_origin
+
+if TYPE_CHECKING:
+    from types import UnionType
 
 
 def split_comment(comment: str | None, n: int) -> list[str]:
@@ -12,7 +16,7 @@ def split_comment(comment: str | None, n: int) -> list[str]:
     if comment is None or len(comment) == 0:
         return []
 
-    lines: List[str] = []
+    lines: list[str] = []
     s = comment.split("\n")
     for line in s:
         line = line.strip()

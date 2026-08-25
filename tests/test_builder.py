@@ -30,7 +30,8 @@ def test_builder_nested():
 
     assert (
         ts_builder.to_str()
-        == "export interface DeepDict {\n\tdeep: InnerDict | null;\n}\n\nexport interface InnerDict {\n\ts: string;\n}\n\n"
+        == "export interface DeepDict {\n\tdeep: InnerDict | null;\n}\n\n"
+        "export interface InnerDict {\n\ts: string;\n}\n\n"
     )
 
 
@@ -52,5 +53,6 @@ def test_builder_ts_elements():
 
     assert (
         ts_builder.to_str()
-        == "export interface DeepDict {\n\tdeep: InnerDict | null;\n}\n\nexport interface InnerDict {\n\ts: string;\n}\n\n"
+        == "export interface DeepDict {\n\tdeep: InnerDict | null;\n}\n\n"
+        "export interface InnerDict {\n\ts: string;\n}\n\n"
     )

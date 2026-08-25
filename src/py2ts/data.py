@@ -7,16 +7,19 @@ interfaces.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from functools import total_ordering
-from types import UnionType
-from typing import Any, Dict, Iterable, Iterator, List, Optional, Sequence, Set
+from typing import TYPE_CHECKING, Any
 
 from typing_extensions import Self
 
 from .config import CONFIG
+
+if TYPE_CHECKING:
+    from types import UnionType
 
 
 @total_ordering
@@ -49,7 +52,7 @@ class TypescriptPrimitive(Enum):
         TypescriptPrimitive | None
             The corresponding TypeScript primitive type, or `None` if no mapping exists.
         """
-        TYPE_MAP: dict = {
+        type_map: dict = {
             str: TypescriptPrimitive.STRING,
             int: TypescriptPrimitive.NUMBER,
             float: TypescriptPrimitive.NUMBER,
@@ -60,16 +63,18 @@ class TypescriptPrimitive(Enum):
         }
 
         if CONFIG.none_as_null:
-            TYPE_MAP[type(None)] = TypescriptPrimitive.NULL
+            type_map[type(None)] = TypescriptPrimitive.NULL
+            type_map[None] = TypescriptPrimitive.NULL
         else:
-            TYPE_MAP[type(None)] = TypescriptPrimitive.UNDEFINED
+            type_map[type(None)] = TypescriptPrimitive.UNDEFINED
+            type_map[None] = TypescriptPrimitive.UNDEFINED
 
         if CONFIG.any_as_unknown:
-            TYPE_MAP[Any] = TypescriptPrimitive.UNKNOWN
+            type_map[Any] = TypescriptPrimitive.UNKNOWN
         else:
-            TYPE_MAP[Any] = TypescriptPrimitive.ANY
+            type_map[Any] = TypescriptPrimitive.ANY
 
-        return TYPE_MAP.get(py_type)
+        return type_map.get(py_type)
 
     def __lt__(self, other: TypescriptPrimitive) -> bool:
         """Return whether the current primitive type is less than the other."""
@@ -82,10 +87,10 @@ class TypescriptPrimitive(Enum):
 
 
 def _elements_to_names(
-    elements: Sequence[TypescriptType] | Set[TypescriptType] | Sequence[str] | Set[str],
+    elements: Sequence[TypescriptType] | set[TypescriptType] | Sequence[str] | set[str],
     sort: bool = True,
-) -> List[str]:
-    strs: List[str] = []
+) -> list[str]:
+    strs: list[str] = []
     for t in elements:
         if isinstance(t, TSComplex):
             strs.append(t.name)
@@ -104,7 +109,7 @@ class TypescriptType(ABC):
     """Represents a TypeScript type."""
 
     not_required: bool = False
-    comment: Optional[str] = None
+    comment: str | None = None
 
     @abstractmethod
     def __str__(self) -> str:
@@ -143,7 +148,10 @@ class TSPrimitiveType(TypescriptType):
     type: TypescriptPrimitive
 
     def __str__(self) -> str:
-        """Return a string representation of the primitive type for use in the generated code."""
+        """Return a string representation of the primitive type.
+
+        For use in the generated code.
+        """
         return self.type.value
 
     def __hash__(self) -> int:
@@ -162,7 +170,10 @@ class TSLiteralType(TypescriptType):
     value: Any
 
     def __str__(self) -> str:
-        """Return a string representation of the literal type for use in the generated code."""
+        """Return a string representation of the literal type.
+
+        For use in the generated code.
+        """
         return f'"{self.value}"'
 
     def __hash__(self) -> int:
@@ -183,18 +194,18 @@ class DerivedType(TypescriptType, ABC):
     such as arrays, tuples, unions and dicts.
     """
 
-    elements: Set[TypescriptType] | TypescriptType | Sequence[TypescriptType]
+    elements: set[TypescriptType] | TypescriptType | Sequence[TypescriptType]
 
     def __hash__(self) -> int:
         """Return a hash value for the derived type."""
-        if isinstance(self.elements, Set) or isinstance(self.elements, Sequence):
+        if isinstance(self.elements, set) or isinstance(self.elements, Sequence):
             return hash(frozenset(self.elements))
         else:
             return hash(self.elements)
 
     def __iter__(self) -> Iterator[TypescriptType]:
         """Return an iterator over the elements of the derived type."""
-        if isinstance(self.elements, Set):
+        if isinstance(self.elements, set):
             yield from self.elements
         elif isinstance(self.elements, Sequence):
             yield from self.elements
@@ -203,7 +214,7 @@ class DerivedType(TypescriptType, ABC):
 
     def __len__(self) -> int:
         """Return the number of elements in the derived type."""
-        if isinstance(self.elements, Set):
+        if isinstance(self.elements, set):
             return len(self.elements)
         return 1
 
@@ -230,7 +241,10 @@ class TSUnionType(DerivedType):
     """
 
     def __str__(self) -> str:
-        """Return a string representation of the union type for use in the generated code."""
+        """Return a string representation of the union type.
+
+        For use in the generated code.
+        """
         strs = []
         for t in self:
             if isinstance(t, TSInterface):
@@ -255,8 +269,11 @@ class TSArrayType(DerivedType):
     """
 
     def __str__(self) -> str:
-        """Return a string representation of the array type for use in the generated code."""
-        if isinstance(self.elements, Set) or isinstance(self.elements, Sequence):
+        """Return a string representation of the array type.
+
+        For use in the generated code.
+        """
+        if isinstance(self.elements, set) or isinstance(self.elements, Sequence):
             raise NotImplementedError("Array of multiple types is not supported!")
 
         return f"Array<{_elements_to_names([self.elements])[0]}>"
@@ -275,8 +292,11 @@ class TSTupleType(DerivedType):
     """
 
     def __str__(self) -> str:
-        """Return a string representation of the tuple type for use in the generated code."""
-        if isinstance(self.elements, Set):
+        """Return a string representation of the tuple type.
+
+        For use in the generated code.
+        """
+        if isinstance(self.elements, set):
             e_names = _elements_to_names(self.elements)
         else:
             e_names = [str(self.elements)]
@@ -301,8 +321,11 @@ class TypescriptIntersectionType(DerivedType):
     """
 
     def __str__(self) -> str:
-        """Return a string representation of the intersection type for use in the generated code."""
-        if isinstance(self.elements, Set) or isinstance(self.elements, Sequence):
+        """Return a string representation of the intersection type.
+
+        For use in the generated code.
+        """
+        if isinstance(self.elements, set) or isinstance(self.elements, Sequence):
             e_names = _elements_to_names(self.elements)
         else:
             e_names = [str(self.elements)]
@@ -328,8 +351,11 @@ class TSRecordType(DerivedType):
         super().__init__(elements=[key, value])
 
     def __str__(self) -> str:
-        """Return a string representation of the record type for use in the generated code."""
-        if isinstance(self.elements, Set) or isinstance(self.elements, Sequence):
+        """Return a string representation of the record type.
+
+        For use in the generated code.
+        """
+        if isinstance(self.elements, set) or isinstance(self.elements, Sequence):
             e_names = _elements_to_names(self.elements, False)
         else:
             e_names = [str(self.elements)]
@@ -386,7 +412,7 @@ class TSComplex(TypescriptType, ABC):
 class TSEnumType(TSComplex):
     """Represents a TypeScript enum type."""
 
-    elements: Dict[str, str | int]
+    elements: dict[str, str | int]
 
     def __str__(self) -> str:
         """Return a string representation of the enum for use in the generated code.
@@ -398,9 +424,9 @@ class TSEnumType(TSComplex):
 
         for key, value in self.elements.items():
             if isinstance(value, str):
-                enum_str += f"{CONFIG.TAB}{key} = '{value}',\n"
+                enum_str += f"{CONFIG.tab}{key} = '{value}',\n"
             elif isinstance(value, int):
-                enum_str += f"{CONFIG.TAB}{key} = {value},\n"
+                enum_str += f"{CONFIG.tab}{key} = {value},\n"
             else:
                 raise ValueError(f"Invalid value for enum: {value}")
         enum_str += "}"
@@ -448,14 +474,15 @@ class TSInterface(TSComplex):
     name: str
 
     # If string the element is a nested interface reference (if recursive)
-    elements: Dict[str, TypescriptType | TSInterface | TSEnumType]
+    elements: dict[str, TypescriptType | TSInterface | TSEnumType]
 
-    inheritance: Optional[TSInterface | TSInterfaceRef] = None
+    inheritance: TSInterface | TSInterfaceRef | None = None
 
     def __str__(self) -> str:
         """Return a string representation of the interface.
 
-        This does not include nested interfaces or enums, you may need to add them manually.
+        This does not include nested interfaces or enums, you may need to add them
+        manually.
         """
         prefix = "export " if CONFIG.export_interfaces else ""
 
@@ -476,14 +503,17 @@ class TSInterface(TSComplex):
             b = _elements_to_names([value])[0]
 
             # add the type to the interface
-            interface_str += f"{CONFIG.TAB}{a}: {b};\n"
+            interface_str += f"{CONFIG.tab}{a}: {b};\n"
 
         interface_str += "}"
 
         return interface_str
 
     def full_str(self) -> str:
-        """Return a string representation of the interface including nested interfaces and enums."""
+        """Return a string representation of the interface.
+
+        Including nested interfaces and enums.
+        """
         this_interface_str = str(self)
 
         refs = []
@@ -533,10 +563,10 @@ class TSInterface(TSComplex):
 
 
 def ts_reference_str(elements: Iterable[TypescriptType], ignore=[]) -> str:
-    """Return a string representation of all interfaces and enums in the elements.
+    """Return a string representation of all interfaces and enums.
 
-    Resolves nested types and returns a string representation of all interfaces and enums
-    in the elements.
+    Resolves nested types and returns a string representation of all interfaces and
+    enums in the elements.
 
     Can be used to create the typescript definitions as strings when generating code.
 

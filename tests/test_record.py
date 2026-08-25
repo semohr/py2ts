@@ -1,4 +1,4 @@
-from typing import Dict, TypedDict
+from typing import TypedDict
 import pytest
 
 from py2ts.config import CONFIG
@@ -34,7 +34,7 @@ from py2ts.data import TSPrimitiveType, TSRecordType, TypescriptPrimitive
             "Record<string, string>",
         ),
         (
-            Dict,
+            dict,
             TSRecordType(
                 TSPrimitiveType(TypescriptPrimitive.UNKNOWN),
                 TSPrimitiveType(TypescriptPrimitive.UNKNOWN),
@@ -42,7 +42,7 @@ from py2ts.data import TSPrimitiveType, TSRecordType, TypescriptPrimitive
             "Record<unknown, unknown>",
         ),
         (
-            Dict[str, None],
+            dict[str, None],
             TSRecordType(
                 TSPrimitiveType(TypescriptPrimitive.STRING),
                 TSPrimitiveType(TypescriptPrimitive.NULL),
@@ -50,7 +50,7 @@ from py2ts.data import TSPrimitiveType, TSRecordType, TypescriptPrimitive
             "Record<string, null>",
         ),
         (
-            Dict[None, str],
+            dict[None, str],
             TSRecordType(
                 TSPrimitiveType(TypescriptPrimitive.NULL),
                 TSPrimitiveType(TypescriptPrimitive.STRING),
@@ -76,7 +76,7 @@ def test_nested_record():
     class InnerRecord(TypedDict):
         s: str
 
-    t = generate_ts(Dict[str, InnerRecord])
+    t = generate_ts(dict[str, InnerRecord])
     ts_str = str(t)
     print(ts_str, flush=True)
     assert "Record<string, InnerRecord>" in ts_str

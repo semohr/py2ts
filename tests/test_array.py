@@ -1,4 +1,4 @@
-from typing import List, Sequence
+from collections.abc import Sequence
 import pytest
 from collections.abc import Sequence as ABCSequence
 
@@ -42,25 +42,25 @@ def test_basic_array(py_type, expected_ts_type, expected_ts_str):
 
     # Test List
     CONFIG.none_as_null = True
-    t = generate_ts(List[py_type])
+    t = generate_ts(list[py_type])
 
     assert t == expected_ts_type, f"Expected {expected_ts_type}, but got {t}"
-    assert str(t) == expected_ts_str, f"Expected {expected_ts_str}, but got {str(t)}"
+    assert str(t) == expected_ts_str, f"Expected {expected_ts_str}, but got {t!s}"
 
     # Test list
     t = generate_ts(list[py_type])
 
     assert t == expected_ts_type, f"Expected {expected_ts_type}, but got {t}"
-    assert str(t) == expected_ts_str, f"Expected {expected_ts_str}, but got {str(t)}"
+    assert str(t) == expected_ts_str, f"Expected {expected_ts_str}, but got {t!s}"
 
     # Test sequence
     t = generate_ts(Sequence[py_type])
 
     assert t == expected_ts_type, f"Expected {expected_ts_type}, but got {t}"
-    assert str(t) == expected_ts_str, f"Expected {expected_ts_str}, but got {str(t)}"
+    assert str(t) == expected_ts_str, f"Expected {expected_ts_str}, but got {t!s}"
 
     # Test ABCSequence
     t = generate_ts(ABCSequence[py_type])
 
     assert t == expected_ts_type, f"Expected {expected_ts_type}, but got {t}"
-    assert str(t) == expected_ts_str, f"Expected {expected_ts_str}, but got {str(t)}"
+    assert str(t) == expected_ts_str, f"Expected {expected_ts_str}, but got {t!s}"

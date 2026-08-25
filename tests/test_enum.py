@@ -15,7 +15,7 @@ def test_basic_enum():
     assert str(ts) == "export enum Colors {\n\tGreen = 1,\n\tRed = 2,\n}"
 
 
-def test_with_stringValue():
+def test_with_string_value():
     class Colors(Enum):
         Green = "green"
         Red = "red"
