@@ -71,7 +71,7 @@ def generate_ts(
     """
     # Reset config
     if config:
-        CONFIG.__init__()
+        CONFIG.reset()
         CONFIG.override(config)
 
     # Reset recursion tracking
@@ -83,7 +83,7 @@ def generate_ts(
 
 # Used to keep track of interfaces that have already been generated
 # to prevent infinite recursion in generating ts types.
-interfaces = set()
+interfaces: set[Any] = set()
 
 
 def _generate_ts(py_type: type | UnionType) -> TypescriptType:
@@ -116,10 +116,9 @@ def _generate_ts(py_type: type | UnionType) -> TypescriptType:
 
 
 def _dict_to_ts(py_type: type[dict]):
-    args = get_args(py_type)
+    args = list(get_args(py_type))
     if len(args) != 2:
         # Fill with any until 2 values
-        args = list(args)
         while len(args) < 2:
             args.append(Any)
 

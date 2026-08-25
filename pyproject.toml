@@ -86,7 +86,6 @@ addopts = ["--import-mode=importlib", "--cov=."]
 filterwarnings = ["error", "ignore::DeprecationWarning"]
 pythonpath = ["."]
 
-
 [tool.coverage.report]
 omit = ["*/tests/*"]
 exclude_also = ["raise NotImplementedError", "@(abc\\.)?abstractmethod"]
