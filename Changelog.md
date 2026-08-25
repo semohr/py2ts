@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 - Migrated the development environment and dependency management to uv.
 - Enabled additional Ruff linting rules to improve code quality and consistency.
 - Reformatted the codebase to comply with the updated Ruff configuration.
+- Added support for generic types (TypeVars, bounded type parameters, parametrized
+  references and generic inheritance), including pydantic generic models.
 
 ## [0.6.0]
 
