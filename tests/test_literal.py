@@ -24,4 +24,4 @@ def test_literal(py_type, expected_ts_type, expected_ts_str):
 
     assert ts == expected_ts_type, f"Expected {expected_ts_type}, but got {ts}"
     for e in expected_ts_str:
-        assert e in str(ts), f"Expected {e} in {str(ts)}"
+        assert e in str(ts), f"Expected {e} in {ts!s}"
