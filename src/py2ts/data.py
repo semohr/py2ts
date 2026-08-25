@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from functools import total_ordering
@@ -92,7 +92,11 @@ def _elements_to_names(
 ) -> list[str]:
     strs: list[str] = []
     for t in elements:
-        if isinstance(t, TSComplex):
+        # References with type arguments render the full instantiation
+        # (e.g. Resource<A, T> instead of just Resource)
+        if isinstance(t, TSInterfaceRef) and t.type_args:
+            strs.append(str(t))
+        elif isinstance(t, TSComplex):
             strs.append(t.name)
         else:
             strs.append(str(t))
@@ -179,6 +183,25 @@ class TSLiteralType(TypescriptType):
     def __hash__(self) -> int:
         """Return a hash value for the literal type."""
         return hash(self.value)
+
+
+@dataclass
+class TSTypeParameterRef(TypescriptType):
+    """Represents a reference to a type parameter of a generic interface.
+
+    Example:
+    T
+    """
+
+    name: str
+
+    def __str__(self) -> str:
+        """Return a string representation of the type parameter reference."""
+        return self.name
+
+    def __hash__(self) -> int:
+        """Return a hash value for the type parameter reference."""
+        return hash(self.name)
 
 
 # ---------------------------------------------------------------------------- #
@@ -456,15 +479,31 @@ class TSEnumType(TSComplex):
 
 @dataclass
 class TSInterfaceRef(TSComplex):
-    """Represents a TypeScript interface reference."""
+    """Represents a TypeScript interface reference.
+
+    References to instantiated generics carry their generic type arguments
+    (e.g. ``Resource<A, T>``). The ``definition`` points to the generic
+    interface or enum definition the reference instantiates, if known.
+    """
+
+    type_args: tuple[TypescriptType, ...] = ()
+    definition: TSComplex | None = field(default=None, compare=False)
 
     def __str__(self) -> str:
         """Return a string representation of the interface reference."""
-        return self.name
+        if not self.type_args:
+            return self.name
+        return (
+            f"{self.name}<{', '.join(_elements_to_names(self.type_args, sort=False))}>"
+        )
 
     def __hash__(self) -> int:
-        """Return a hash value for the complex type."""
-        return super().__hash__()
+        """Return a hash value for the interface reference.
+
+        Includes the type arguments so that distinct instantiations hash
+        differently. The definition is not part of the hash (compare=False).
+        """
+        return hash((self.name, self.type_args))
 
 
 @dataclass
@@ -478,6 +517,26 @@ class TSInterface(TSComplex):
 
     inheritance: TSInterface | TSInterfaceRef | None = None
 
+    # Type parameters of the interface (e.g. ("A", "T") for Resource<A, T>)
+    type_params: tuple[str, ...] = ()
+
+    # Bounds of the type parameters (e.g. {"T": string} renders T extends string)
+    type_param_bounds: dict[str, TypescriptType] = field(default_factory=dict)
+
+    def _type_params_str(self) -> str:
+        """Render the type parameter list (e.g. ``<A, T extends string>``)."""
+        if not self.type_params:
+            return ""
+        params = []
+        for p in self.type_params:
+            bound = self.type_param_bounds.get(p)
+            params.append(
+                f"{p} extends {_elements_to_names([bound], sort=False)[0]}"
+                if bound
+                else p
+            )
+        return f"<{', '.join(params)}>"
+
     def __str__(self) -> str:
         """Return a string representation of the interface.
 
@@ -488,11 +547,14 @@ class TSInterface(TSComplex):
 
         # Edge case: empty interface with inheritance
         if len(self.elements) == 0 and self.inheritance is not None:
-            return f"{prefix}type {self.name} = {self.inheritance.name};\n"
+            return (
+                f"{prefix}type {self.name}{self._type_params_str()} = "
+                f"{self._inheritance_str()};\n"
+            )
 
-        interface_str = f"{prefix}interface {self.name}"
+        interface_str = f"{prefix}interface {self.name}{self._type_params_str()}"
         if self.inheritance is not None:
-            interface_str += f" extends {self.inheritance.name}"
+            interface_str += f" extends {self._inheritance_str()}"
         interface_str += " {\n"
 
         for key, value in self.elements.items():
@@ -516,19 +578,29 @@ class TSInterface(TSComplex):
         """
         this_interface_str = str(self)
 
-        refs = []
-        for v in self.elements.values():
-            refs.append(v)
+        refs = list(self.elements.values())
         if self.inheritance is not None:
             refs.append(self.inheritance)
+        # Bounds can reference other interfaces (e.g. C extends Content); the
+        # definitions are needed to render the full output.
+        refs.extend(self.type_param_bounds.values())
 
-        this_interface_str = ts_reference_str(sorted(refs)) + this_interface_str
+        this_interface_str = (
+            ts_reference_str(sorted(refs), ignore=[self]) + this_interface_str
+        )
 
         return this_interface_str
 
     def __hash__(self) -> int:
         """Return a hash value for the array type."""
         return super().__hash__()
+
+    def _inheritance_str(self) -> str:
+        """Return the inheritance rendered as a reference (with type arguments)."""
+        if isinstance(self.inheritance, TSInterfaceRef):
+            return str(self.inheritance)
+        assert self.inheritance is not None
+        return self.inheritance.name
 
     def referenced_types(self) -> set[TypescriptType]:
         """Get all TypeScript types required for the current type.
@@ -559,6 +631,8 @@ class TSInterface(TSComplex):
             name=self.name,
             elements={k: v for k, v in self.elements.items() if k not in exclude},
             inheritance=self.inheritance.exclude(exclude) if self.inheritance else None,
+            type_params=self.type_params,
+            type_param_bounds=self.type_param_bounds,
         )
 
 
@@ -588,6 +662,7 @@ def ts_reference_str(elements: Iterable[TypescriptType], ignore=[]) -> str:
     if not elements:
         return ""
 
+    top_level = tuple(elements)
     visited = set(ignore)
     full_str = ""
 
@@ -601,11 +676,21 @@ def ts_reference_str(elements: Iterable[TypescriptType], ignore=[]) -> str:
             return
 
         if isinstance(element, TSInterface):
+            # Interfaces are identified by name: skip if a same-named
+            # interface was already emitted (e.g. the definition attached to
+            # a reference when an excluded copy is already present).
+            if any(
+                isinstance(x, TSInterface) and x.name == element.name for x in visited
+            ):
+                return
             full_str = f"{element}\n\n{full_str}"
             visited.add(element)
 
             for key, value in element.elements.items():
                 parse_elements(value)
+
+            for bound in element.type_param_bounds.values():
+                parse_elements(bound)
 
             if element.inheritance is not None:
                 parse_elements(element.inheritance)
@@ -613,6 +698,21 @@ def ts_reference_str(elements: Iterable[TypescriptType], ignore=[]) -> str:
         elif isinstance(element, TSEnumType):
             full_str = f"{element}\n\n{full_str}"
             visited.add(element)
+
+        elif isinstance(element, TSInterfaceRef):
+            visited.add(element)
+            if element.definition is not None and not any(
+                isinstance(x, (TSInterface, TSEnumType))
+                and x.name == element.definition.name
+                for x in (*visited, *top_level)
+            ):
+                # A same-named definition among the top-level elements (or
+                # already visited, e.g. an excluded copy of a recursive
+                # interface) takes precedence over the definition attached
+                # to this reference.
+                parse_elements(element.definition)
+            for arg in element.type_args:
+                parse_elements(arg)
 
         elif isinstance(element, DerivedType):
             elements = list(element.__iter__())
