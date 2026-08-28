@@ -61,6 +61,36 @@ def test_identity_class_collapsed():
     assert "interface Resource<T>" in ts.full_str()
 
 
+def test_typevar_name_collision_keeps_actual_args():
+    """A materialized reference keeps its actual type arguments.
+
+    Pydantic materializes ``ResourceIdentifier[T_I]`` with args preserved.
+    If the origin's own type parameter happens to share a name with a
+    parameter of the enclosing generic class (``T``), the origin must not
+    be treated as a self-instantiation of the enclosing class - the
+    reference has to be rebuilt from the preserved args.
+    """
+
+    class Resource(BaseModel, Generic[T]):
+        type: T
+        id: str
+
+    class ResourceIdentifier(BaseModel, Generic[T]):
+        type: T
+        id: str
+
+    T_I = TypeVar("T_I")
+
+    class RelResource(Resource[T], Generic[T, T_I]):
+        relationships: list[ResourceIdentifier[T_I]]
+
+    ts = generate_ts(RelResource)
+    assert isinstance(ts, TSInterface)
+    assert "interface ResourceIdentifier<T>" in ts.full_str()
+    assert "relationships: Array<ResourceIdentifier<T_I>>;" in ts.full_str()
+    assert "Array<ResourceIdentifier<T>>;" not in ts.full_str()
+
+
 def test_recursive_generic_model():
     """Recursive references terminate and resolve to the definition."""
 

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Generic, TypedDict, TypeVar
 
 from py2ts import generate_ts
-from py2ts.builder import TSBuilder
+from py2ts.builder import TSBuilder, prefix
 
 T = TypeVar("T")
 
@@ -157,6 +157,44 @@ def test_builder_exclude_recursive_generic():
     out = builder.to_str()
     assert "value:" not in out
     assert out.count("interface Node<T>") == 1
+
+
+def test_save_file_writes_typescript(tmp_path):
+    """save_file writes the generated TypeScript to disk.
+
+    Regression test: the file was opened in read mode, so saving always
+    failed.
+    """
+
+    class StringDict(TypedDict):
+        s: str
+        e: int
+
+    ts_builder = TSBuilder()
+    ts_builder.add(StringDict, exclude={"e"})
+
+    target = tmp_path / "types.ts"
+    ts_builder.save_file(str(target))
+
+    assert target.exists()
+    assert target.read_text() == prefix + ts_builder.to_str()
+
+
+def test_save_file_overwrites_existing_file(tmp_path):
+    """save_file overwrites an already existing file."""
+
+    class Foo(TypedDict):
+        bar: str
+
+    ts_builder = TSBuilder()
+    ts_builder.add(Foo)
+
+    target = tmp_path / "types.ts"
+    target.write_text("stale content")
+
+    ts_builder.save_file(str(target))
+
+    assert target.read_text() == prefix + ts_builder.to_str()
 
 
 def test_exclude_recursive_generic_full_str():

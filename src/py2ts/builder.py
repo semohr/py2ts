@@ -156,6 +156,6 @@ class TSBuilder:
 
     def save_file(self, filename: str) -> None:
         """Convert the types in the builder to TypeScript and save them to a file."""
-        with Path(filename).open() as f:
+        with Path(filename).open("w") as f:
             f.write(prefix)
             f.write(self.to_str())
