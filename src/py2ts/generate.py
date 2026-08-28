@@ -119,10 +119,15 @@ def _generate_ts(
                 converted = _generate_ts(origin, context)
                 if isinstance(converted, TSInterfaceRef):
                     # The origin resolved to a self-instantiation (its type
-                    # parameters are in scope); reuse that reference.
-                    return converted
-                assert isinstance(converted, TSInterface)
-                target = converted
+                    # parameters happen to be in scope). The materialized
+                    # class carries the real type arguments in ``args``, so
+                    # reuse only the definition and rebuild the reference
+                    # from ``args`` below.
+                    assert converted.definition is not None
+                    target = converted.definition
+                else:
+                    assert isinstance(converted, TSInterface)
+                    target = converted
             return TSInterfaceRef(
                 target.name,
                 type_args=tuple(_generate_ts(a, context) for a in args),

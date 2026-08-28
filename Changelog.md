@@ -2,7 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.7.0] - Upcoming
+## [0.7.1]
+
+### Fixed
+
+- Generic references in pydantic models no longer lose their type arguments when
+the referenced model's type parameter shares a name with a parameter of the
+enclosing generic class (e.g. `ResourceIdentifier[T_I]` was emitted as
+`ResourceIdentifier<T>`).
+- `TSBuilder.save_file` opens the target file in write mode, so saving generated
+TypeScript to disk no longer fails.
+
+## [0.7.0]
 
 - Migrated the development environment and dependency management to uv.
 - Enabled additional Ruff linting rules to improve code quality and consistency.
