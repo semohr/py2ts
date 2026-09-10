@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import ast
 import enum
 import importlib.util
 import inspect
 import logging
+import sys
 from abc import ABC
 from collections.abc import Sequence
 from dataclasses import is_dataclass
@@ -482,13 +484,74 @@ def _is_dict(py_type: type | UnionType) -> bool:
     return False
 
 
+def _is_type_checking(node: ast.expr) -> bool:
+    """Whether an ``if`` condition checks ``TYPE_CHECKING``."""
+    if isinstance(node, ast.Name):
+        return node.id == "TYPE_CHECKING"
+    return isinstance(node, ast.Attribute) and node.attr == "TYPE_CHECKING"
+
+
+def _type_checking_locals(cls: type) -> dict[str, Any]:
+    """Evaluate top-level TYPE_CHECKING blocks from the class MRO's modules.
+
+    Only plain ``if TYPE_CHECKING:`` or ``if typing.TYPE_CHECKING:`` tests are
+    evaluated. Their code may have arbitrary side effects, including importing
+    modules and defining names. Evaluation is best effort: failures are logged
+    and ignored.
+    """
+    namespace: dict[str, Any] = {}
+    module_names = dict.fromkeys(base.__module__ for base in cls.__mro__)
+    for module_name in module_names:
+        module = sys.modules.get(module_name)
+        if module is None:
+            continue
+        try:
+            source = inspect.getsource(module)
+            # Cheap pre-filter: a module without the pattern cannot contain
+            # a TYPE_CHECKING block, so skip parsing it.
+            if "TYPE_CHECKING" not in source:
+                continue
+            tree = ast.parse(
+                source,
+                filename=getattr(module, "__file__", None) or module_name,
+            )
+        except (OSError, TypeError, SyntaxError):
+            # Built-in, interactively defined, generated, or invalid source.
+            continue
+        for node in tree.body:
+            if not (isinstance(node, ast.If) and _is_type_checking(node.test)):
+                continue
+            code = compile(
+                ast.Module(body=node.body, type_ignores=[]),
+                filename=getattr(module, "__file__", None) or "<type_checking>",
+                mode="exec",
+            )
+            try:
+                exec(code, module.__dict__, namespace)
+            except Exception as exc:
+                log.debug(
+                    "Could not evaluate TYPE_CHECKING block in %s: %s",
+                    module_name,
+                    exc,
+                    exc_info=True,
+                )
+    return namespace
+
+
 def _get_type_hints_no_inheritance(cls: type) -> dict[str, Any]:
     """Get type hints for a class excluding inherited annotations.
 
     Excludes annotations inherited from parent classes.
     """
-    # Get type hints for the current class (including inherited ones)
-    all_hints = get_type_hints(cls, include_extras=True)
+    try:
+        # Get type hints for the current class (including inherited ones)
+        all_hints = get_type_hints(cls, include_extras=True)
+    except NameError:
+        # Retry with names that are only imported for type checkers, e.g.
+        # inside `if TYPE_CHECKING:` blocks.
+        all_hints = get_type_hints(
+            cls, include_extras=True, localns=_type_checking_locals(cls)
+        )
 
     # Get annotations defined directly in this class (not inherited)
     cls_annotations = inspect.get_annotations(cls) or {}
