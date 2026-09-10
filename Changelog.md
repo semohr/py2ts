@@ -2,16 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.2]
+
+### Fixed
+
+- Types in `TYPE_CHECKING` blocks are now correctly emitted in the generated TypeScript
+  code isntead of raising an ValueError.
+
 ## [0.7.1]
 
 ### Fixed
 
 - Generic references in pydantic models no longer lose their type arguments when
-the referenced model's type parameter shares a name with a parameter of the
-enclosing generic class (e.g. `ResourceIdentifier[T_I]` was emitted as
-`ResourceIdentifier<T>`).
+  the referenced model's type parameter shares a name with a parameter of the
+  enclosing generic class (e.g. `ResourceIdentifier[T_I]` was emitted as
+  `ResourceIdentifier<T>`).
 - `TSBuilder.save_file` opens the target file in write mode, so saving generated
-TypeScript to disk no longer fails.
+  TypeScript to disk no longer fails.
 
 ## [0.7.0]
 
