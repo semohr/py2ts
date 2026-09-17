@@ -1,6 +1,6 @@
 [project]
 name = "python2ts"
-version = "v0.7.2"
+version = "v0.7.3"
 authors = [{ name = "Sebastian B. Mohr", email = "sebastian@mohrenclan.de" }]
 description = "Convert python typehints to typescript interfaces"
 readme = "README.md"

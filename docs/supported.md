@@ -73,8 +73,8 @@ Complex types are advanced types that often involve custom structures or classes
 ## Generics
 
 Generic classes (classes with `TypeVar` parameters) are converted to TypeScript generics. Type
-parameters render as `<T>`, bounded parameters as `T extends ...`, and references and
-instantiations keep their type arguments.
+parameters render with a default (`<T = unknown>`), bounded parameters as `T extends ... = ...`,
+and references and instantiations keep their type arguments.
 
 ```python
 from typing import Generic, TypeVar
@@ -92,19 +92,19 @@ print(generate_ts(Node).full_str())
 ```
 
 ```typescript
-export interface Node<T> {
+export interface Node<T = unknown> {
   value: T;
   next: Node<T> | null;
 }
 ```
 
-| Python Type                 | TypeScript                 |
-| --------------------------- | -------------------------- |
-| `class Box(Generic[T])`     | `interface Box<T>`         |
-| `TypeVar("T", bound=str)`   | `T extends string`         |
-| `Node[T]` (field reference) | `Node<T>`                  |
-| `Resource[str, str]`        | `Resource<string, string>` |
-| Unresolved `TypeVar`        | `unknown`                  |
+| Python Type                 | TypeScript                        |
+| --------------------------- | --------------------------------- |
+| `class Box(Generic[T])`     | `interface Box<T = unknown>`      |
+| `TypeVar("T", bound=str)`   | `T extends string = string`       |
+| `Node[T]` (field reference) | `Node<T>`                         |
+| `Resource[str, str]`        | `Resource<string, string>`        |
+| Unresolved `TypeVar`        | `unknown`                         |
 
 Bounded type parameters render with their bound:
 
@@ -118,11 +118,16 @@ class Resource(Generic[A, T]):
 ```
 
 ```typescript
-export interface Resource<A, T extends string> {
+export interface Resource<A = unknown, T extends string = string> {
   type: T;
   attributes: A;
 }
 ```
+
+Type parameters carry defaults, so a `TypeVar` bound to a generic class renders as a bare
+reference (e.g. `TypeVar("R", bound=Resource)` becomes `R extends Resource`) and references
+that omit trailing type arguments stay valid TypeScript instead of leaking the definition's
+parameter names or materializing `unknown`/`string` fallbacks.
 
 Pydantic generic models are supported as well. Pydantic materializes parametrized models as
 real classes (e.g. `AlbumResource(Resource[AlbumAttributes])`) and collapses self-references

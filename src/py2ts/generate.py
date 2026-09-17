@@ -28,6 +28,7 @@ from typing_extensions import NotRequired
 
 from .config import CONFIG
 from .data import (
+    DerivedType,
     TSArrayType,
     TSComplex,
     TSEnumType,
@@ -83,7 +84,19 @@ def generate_ts(
     global interfaces
     interfaces.clear()
 
-    return _generate_ts(py_type)
+    result = _generate_ts(py_type)
+
+    # A bare generic class is referenced without trailing type arguments
+    # (the definition's type parameter defaults apply); at the root the
+    # definition is returned.
+    if (
+        inspect.isclass(py_type)
+        and _type_parameters(py_type)
+        and isinstance(result, TSInterfaceRef)
+        and isinstance(result.definition, TSInterface)
+    ):
+        return result.definition
+    return result
 
 
 # Maps a converted class to its TSInterface. Used to prevent infinite
@@ -125,15 +138,13 @@ def _generate_ts(
                     # class carries the real type arguments in ``args``, so
                     # reuse only the definition and rebuild the reference
                     # from ``args`` below.
-                    assert converted.definition is not None
+                    assert isinstance(converted.definition, TSInterface)
                     target = converted.definition
                 else:
                     assert isinstance(converted, TSInterface)
                     target = converted
-            return TSInterfaceRef(
-                target.name,
-                type_args=tuple(_generate_ts(a, context) for a in args),
-                definition=target,
+            return _instantiate(
+                target, tuple(_generate_ts(a, context) for a in args), context
             )
         py_type = origin
 
@@ -148,10 +159,10 @@ def _generate_ts(
             definition = interfaces.get(cast("type", py_type))
             if definition is None:
                 definition = _classlike_to_ts(cast("type", py_type))
-            return TSInterfaceRef(
-                definition.name,
-                type_args=tuple(TSTypeParameterRef(n) for n in param_names),
-                definition=definition,
+            return _instantiate(
+                definition,
+                tuple(TSTypeParameterRef(n) for n in param_names),
+                context,
             )
 
     is_enum = False
@@ -162,8 +173,13 @@ def _generate_ts(
 
     if is_dataclass(py_type) or is_typeddict(py_type):
         if py_type in interfaces:
-            return _interface_ref(cast("type", py_type))
-        return _classlike_to_ts(cast("type", py_type))
+            return _interface_ref(cast("type", py_type), context)
+        definition = _classlike_to_ts(cast("type", py_type))
+        # A bare generic class is referenced without trailing type arguments;
+        # its definition is still available via ``full_str``/``generate_ts``.
+        if definition.type_params:
+            return _instantiate(definition, (), context)
+        return definition
     elif is_enum:
         return _enum_to_ts(cast("type", py_type))
     elif _is_dict(py_type):
@@ -203,18 +219,73 @@ def _type_parameters(py_type: type) -> tuple[tuple[str, type | None], ...]:
     )
 
 
-def _interface_ref(py_type: type) -> TSInterfaceRef:
+def _has_type_param_ref(t: TypescriptType) -> bool:
+    """Return whether a type references a type parameter (e.g. ``T``)."""
+    if isinstance(t, TSTypeParameterRef):
+        return True
+    if isinstance(t, TSInterfaceRef):
+        return any(_has_type_param_ref(a) for a in t.type_args)
+    if isinstance(t, DerivedType):
+        return any(_has_type_param_ref(e) for e in t)
+    return False
+
+
+def _fallback_arg(name: str, definition: TSInterface) -> TypescriptType:
+    """Build a type argument for a type parameter that is not in scope.
+
+    Type arguments must satisfy the parameter's constraint. A closed
+    constraint is used as-is; unbounded parameters become ``unknown`` and
+    constraints referencing other type parameters become ``any``, which
+    always satisfies the constraint.
+    """
+    bound = definition.type_param_bounds.get(name)
+    if bound is None:
+        return _generate_ts(Any)
+    if not _has_type_param_ref(bound):
+        return bound
+    return TSPrimitiveType(TypescriptPrimitive.ANY)
+
+
+def _instantiate(
+    definition: TSInterface,
+    args: Sequence[TypescriptType],
+    context: frozenset[str],
+) -> TSInterfaceRef:
+    """Build a reference to a generic interface.
+
+    Explicit ``args`` are followed by the definition's remaining type
+    parameters: references when their name is in scope (e.g. ``Node<T>``
+    inside ``Node``) and fallbacks otherwise. Trailing fallbacks are omitted
+    because definitions declare defaults for their type parameters, so
+    ``Resource<unknown, string>`` renders as bare ``Resource``.
+    """
+    type_args = list(args)
+    last_ref = len(args) - 1
+    for name in definition.type_params[len(args) :]:
+        if name in context:
+            type_args.append(TSTypeParameterRef(name))
+            last_ref = len(type_args) - 1
+        else:
+            type_args.append(_fallback_arg(name, definition))
+    # Trailing fallbacks are unnecessary: the definition's type parameter
+    # defaults provide the same values.
+    del type_args[last_ref + 1 :]
+    return TSInterfaceRef(
+        definition.name, type_args=tuple(type_args), definition=definition
+    )
+
+
+def _interface_ref(
+    py_type: type, context: frozenset[str] = frozenset()
+) -> TSInterfaceRef:
     """Build a reference to an already converted interface.
 
     Carries the type parameters of the generic definition as type arguments
-    (e.g. ``Node<T>``) and points back at the definition.
+    (e.g. ``Node<T>``) and points back at the definition. Parameters that are
+    not in scope are covered by the definition's type parameter defaults or
+    filled with a fallback when a later argument requires them.
     """
-    ts = interfaces[py_type]
-    return TSInterfaceRef(
-        ts.name,
-        type_args=tuple(TSTypeParameterRef(p) for p in ts.type_params),
-        definition=ts,
-    )
+    return _instantiate(interfaces[py_type], (), context)
 
 
 def _generic_args(py_type: type, base: type) -> tuple | None:
@@ -258,19 +329,29 @@ def _classlike_to_ts(py_type: type) -> TSInterface:
         name = "Anonymous"
 
     params = _type_parameters(py_type)
-    type_params = tuple(name for name, _ in params)
+    type_params = tuple(param_name for param_name, _ in params)
     context = frozenset(type_params)
-    bounds = {
-        name: _generate_ts(bound, context)
-        for name, bound in params
-        if bound is not None
-    }
+    type_param_bounds: dict[str, TypescriptType] = {}
 
     elements: dict[str, TypescriptType] = {}
-    ts = TSInterface(name, elements, None, type_params, bounds)
-    # Register the interface before converting the fields so that recursive
-    # references (e.g. Node[T]) resolve to this definition.
+    ts = TSInterface(
+        name,
+        elements,
+        None,
+        type_params,
+        type_param_bounds=type_param_bounds,
+    )
+    # Register the interface before converting the bounds and fields so that
+    # recursive references (e.g. Node[T]) resolve to this definition.
     interfaces[py_type] = ts
+
+    # Bounds can reference generic classes (e.g. ``C = TypeVar("C",
+    # bound=Content)``); they resolve to references (bare ``Content`` here,
+    # relying on the definition's type parameter defaults).
+    for param_name, bound in params:
+        if bound is None:
+            continue
+        type_param_bounds[param_name] = _generate_ts(bound, context)
 
     for n, v in hints.items():
         elements[n] = _generate_ts(v, context)
@@ -334,19 +415,25 @@ def _classlike_to_ts(py_type: type) -> TSInterface:
 
 
 def _inheritance_ref(
-    py_type: type, base: type, i: TSInterface | TSInterfaceRef, context: frozenset[str]
+    py_type: type,
+    base: type,
+    i: TSInterface | TSInterfaceRef,
+    context: frozenset[str],
 ) -> TSInterfaceRef:
     """Build a reference to a base class.
 
-    Carries type arguments if the base is parametrized.
+    Carries type arguments if the base is parametrized; parameters that are
+    not covered by the arguments are filled with the ones in scope or their
+    fallback.
     """
     args = _generic_args(py_type, base)
     if args is not None:
         definition = i.definition if isinstance(i, TSInterfaceRef) else i
-        return TSInterfaceRef(
-            i.name,
-            type_args=tuple(_generate_ts(a, context) for a in args),
-            definition=definition,
+        assert isinstance(definition, TSInterface)
+        return _instantiate(
+            definition,
+            tuple(_generate_ts(a, context) for a in args),
+            context,
         )
     if isinstance(i, TSInterface):
         return TSInterfaceRef(i.name, definition=i)
@@ -441,10 +528,10 @@ def _basic_to_ts(
                     f"Conversion of type {py_type} is not yet implemented"
                 )
         if isinstance(target, TSInterface):
-            return TSInterfaceRef(
-                target.name,
-                type_args=tuple(_generate_ts(a, context) for a in get_args(py_type)),
-                definition=target,
+            return _instantiate(
+                target,
+                tuple(_generate_ts(a, context) for a in get_args(py_type)),
+                context,
             )
         raise NotImplementedError(
             f"Conversion of type {py_type} is not yet implemented"
@@ -453,12 +540,15 @@ def _basic_to_ts(
     # Generic classes
     if inspect.isclass(py_type):
         if py_type in interfaces:
-            return _interface_ref(py_type)
+            return _interface_ref(py_type, context)
         log.info(
             "Generic classes might not be converted correctly. Please use "
             "dataclasses or TypedDicts instead!"
         )
-        return _classlike_to_ts(py_type)
+        definition = _classlike_to_ts(py_type)
+        if definition.type_params:
+            return _instantiate(definition, (), context)
+        return definition
 
     else:
         raise NotImplementedError(
@@ -548,10 +638,14 @@ def _get_type_hints_no_inheritance(cls: type) -> dict[str, Any]:
         all_hints = get_type_hints(cls, include_extras=True)
     except NameError:
         # Retry with names that are only imported for type checkers, e.g.
-        # inside `if TYPE_CHECKING:` blocks.
-        all_hints = get_type_hints(
-            cls, include_extras=True, localns=_type_checking_locals(cls)
-        )
+        # inside `if TYPE_CHECKING:` blocks, and with the class's own PEP 695
+        # type parameters: some Python 3.12 versions do not put them in
+        # scope when resolving annotation strings, raising NameError.
+        localns = {
+            **_type_checking_locals(cls),
+            **{p.__name__: p for p in getattr(cls, "__type_params__", ())},
+        }
+        all_hints = get_type_hints(cls, include_extras=True, localns=localns)
 
     # Get annotations defined directly in this class (not inherited)
     cls_annotations = inspect.get_annotations(cls) or {}
