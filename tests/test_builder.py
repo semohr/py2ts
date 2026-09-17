@@ -148,7 +148,7 @@ def test_builder_exclude_recursive_generic():
 
     assert "value:" not in out
     assert "next:" in out
-    assert out.count("interface Node<T>") == 1
+    assert out.count("interface Node<T = unknown>") == 1
 
     # The same must hold when the generic definition is also referenced
     # from another added type.
@@ -156,7 +156,7 @@ def test_builder_exclude_recursive_generic():
     builder.add(Node, exclude={"value"}).add(Wrapper)
     out = builder.to_str()
     assert "value:" not in out
-    assert out.count("interface Node<T>") == 1
+    assert out.count("interface Node<T = unknown>") == 1
 
 
 def test_save_file_writes_typescript(tmp_path):
@@ -202,4 +202,4 @@ def test_exclude_recursive_generic_full_str():
     excluded = generate_ts(Node).exclude({"value"})
     full = excluded.full_str()
     assert "value:" not in full
-    assert full.count("interface Node<T>") == 1
+    assert full.count("interface Node<T = unknown>") == 1

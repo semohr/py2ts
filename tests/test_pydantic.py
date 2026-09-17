@@ -36,7 +36,10 @@ class Node(BaseModel, Generic[T_I]):
 def test_bare_generic_model():
     ts = generate_ts(Resource)
     assert isinstance(ts, TSInterface)
-    assert str(ts) == "export interface Resource<T> {\n\tid: string;\n\tdata: T;\n}"
+    assert (
+        str(ts)
+        == "export interface Resource<T = unknown> {\n\tid: string;\n\tdata: T;\n}"
+    )
 
 
 def test_materialized_generic_model():
@@ -50,15 +53,18 @@ def test_materialized_generic_model():
     assert isinstance(ts, TSInterface)
     assert str(ts) == "export type AlbumResource = Resource<AlbumAttributes>;\n"
     assert "interface AlbumAttributes" in ts.full_str()
-    assert "interface Resource<T>" in ts.full_str()
+    assert "interface Resource<T = unknown>" in ts.full_str()
 
 
 def test_identity_class_collapsed():
     """Resource[T] collapses to the identity class; arguments are recovered."""
     ts = generate_ts(Wrapper)
     assert isinstance(ts, TSInterface)
-    assert str(ts) == "export interface Wrapper<T> {\n\tresource: Resource<T>;\n}"
-    assert "interface Resource<T>" in ts.full_str()
+    assert (
+        str(ts)
+        == "export interface Wrapper<T = unknown> {\n\tresource: Resource<T>;\n}"
+    )
+    assert "interface Resource<T = unknown>" in ts.full_str()
 
 
 def test_typevar_name_collision_keeps_actual_args():
@@ -86,7 +92,7 @@ def test_typevar_name_collision_keeps_actual_args():
 
     ts = generate_ts(RelResource)
     assert isinstance(ts, TSInterface)
-    assert "interface ResourceIdentifier<T>" in ts.full_str()
+    assert "interface ResourceIdentifier<T = unknown>" in ts.full_str()
     assert "relationships: Array<ResourceIdentifier<T_I>>;" in ts.full_str()
     assert "Array<ResourceIdentifier<T>>;" not in ts.full_str()
 
@@ -100,7 +106,7 @@ def test_recursive_generic_model():
     ts = generate_ts(StringNode)
     assert isinstance(ts, TSInterface)
     assert "export type StringNode = Node<string>;\n" in ts.full_str()
-    assert "export interface Node<T_I>" in ts.full_str()
+    assert "export interface Node<T_I = unknown>" in ts.full_str()
 
 
 def test_bounded_generic_model():
@@ -116,7 +122,10 @@ def test_bounded_generic_model():
 
     ts = generate_ts(Response)
     assert isinstance(ts, TSInterface)
-    assert str(ts) == "export interface Response<C extends Content> {\n\tcontent: C;\n}"
+    assert (
+        str(ts)
+        == "export interface Response<C extends Content = Content> {\n\tcontent: C;\n}"
+    )
     assert "export interface Content" in ts.full_str()
 
     # Materialized instantiations keep the type arguments
@@ -126,3 +135,89 @@ def test_bounded_generic_model():
     ts = generate_ts(JsonResponse)
     assert isinstance(ts, TSInterface)
     assert str(ts) == "export type JsonResponse = Response<Content>;\n"
+
+
+def test_typevar_bound_to_generic_model():
+    """A TypeVar bound to a generic model keeps the bound's parameters generic.
+
+    A bare generic bound (e.g. ``Resource`` for ``Resource[A, T]``) must not
+    render as bare ``Resource`` (TS2314: requires type arguments) or as
+    ``Resource<A, T>`` using the definition's out-of-scope type parameter
+    names (TS2304). The bound is rendered as bare ``Resource`` instead;
+    the type parameter defaults provide the concrete arguments.
+    """
+    A = TypeVar("A")
+    T = TypeVar("T", bound=str)
+
+    class Resource(BaseModel, Generic[A, T]):
+        type: T
+        attributes: A
+
+    R = TypeVar("R", bound=Resource)
+
+    class Document(BaseModel, Generic[R]):
+        data: R
+
+    ts = generate_ts(Document)
+    assert isinstance(ts, TSInterface)
+    assert str(ts) == (
+        "export interface Document<R extends Resource = Resource> {\n\tdata: R;\n}"
+    )
+    assert (
+        "export interface Resource<A = unknown, T extends string = string>"
+        in ts.full_str()
+    )
+
+    R_I = TypeVar("R_I", bound=Resource)
+
+    class DocumentWithIncluded(Document[R], Generic[R, R_I]):
+        included: list[R_I] | None = None
+
+    ts = generate_ts(DocumentWithIncluded)
+    assert isinstance(ts, TSInterface)
+    assert str(ts) == (
+        "export interface DocumentWithIncluded<"
+        "R extends Resource = Resource, "
+        "R_I extends Resource = Resource> extends Document<R> {\n"
+        "\tincluded: Array<R_I> | null;\n"
+        "}"
+    )
+
+
+def test_reference_to_typevar_bound_model_is_complete():
+    """References to a model bounded by a generic model keep the full arity.
+
+    A bare reference (``Document``) and a materialized reference
+    (``Document[ItemResource]``) must both stay valid without leaking
+    the bound's out-of-scope parameters.
+    """
+    A = TypeVar("A")
+    T = TypeVar("T", bound=str)
+
+    class Resource(BaseModel, Generic[A, T]):
+        type: T
+        attributes: A
+
+    class ItemResource(Resource[str, str]):
+        id: str
+
+    R = TypeVar("R", bound=Resource)
+
+    class Document(BaseModel, Generic[R]):
+        data: R
+
+    class Holder(BaseModel):
+        first: Document[ItemResource]
+        second: Document
+
+    ts = generate_ts(Holder)
+    assert isinstance(ts, TSInterface)
+    assert str(ts) == (
+        "export interface Holder {\n"
+        "\tfirst: Document<ItemResource>;\n"
+        "\tsecond: Document;\n"
+        "}"
+    )
+    full = ts.full_str()
+    assert "export interface ItemResource extends Resource<string, string>" in full
+    assert "export interface Document<R extends Resource = Resource>" in full

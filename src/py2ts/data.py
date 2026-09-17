@@ -524,17 +524,17 @@ class TSInterface(TSComplex):
     type_param_bounds: dict[str, TypescriptType] = field(default_factory=dict)
 
     def _type_params_str(self) -> str:
-        """Render the type parameter list (e.g. ``<A, T extends string>``)."""
+        """Render the type parameter list (e.g. ``<A, T extends string = string>``)."""
         if not self.type_params:
             return ""
         params = []
         for p in self.type_params:
-            bound = self.type_param_bounds.get(p)
-            params.append(
-                f"{p} extends {_elements_to_names([bound], sort=False)[0]}"
-                if bound
-                else p
-            )
+            if bound := self.type_param_bounds.get(p):
+                bound_str = _elements_to_names([bound], sort=False)[0]
+                params.append(f"{p} extends {bound_str} = {bound_str}")
+            else:
+                default = "unknown" if CONFIG.any_as_unknown else "any"
+                params.append(f"{p} = {default}")
         return f"<{', '.join(params)}>"
 
     def __str__(self) -> str:
