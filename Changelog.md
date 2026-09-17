@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.3]
+
+### Fixed
+
+- A `TypeVar` bound to a generic class no longer produces an invalid
+  TypeScript constraint. Generic interfaces declare defaults for their type
+  parameters (`T = unknown`, `T extends string = string`), so out-of-scope
+  references render as bare references (`R extends Resource`, `data: R`)
+  instead of leaking the definition's parameter names or materializing
+  `unknown`/`string` fallbacks.
+- References to a generic interface always carry a valid type argument
+  list, including bare references from non-generic classes and
+  materialized pydantic/generic bases.
+- Generic class fields keep their type parameters on Python 3.12.x, where
+  `get_type_hints` resolves PEP 695 annotation strings to same-named
+  module-level `TypeVar`s. Type parameter scoping matches by name, so
+  fields like `data: R` are no longer emitted as `unknown`.
+
 ## [0.7.2]
 
 ### Fixed
