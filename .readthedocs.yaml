@@ -23,12 +23,12 @@ sphinx:
 #    - pdf
 #    - epub
 
-# Optional but recommended, declare the Python requirements required
-# to build your documentation
-# See https://docs.readthedocs.io/en/stable/guides/reproducible-builds.html
+# Install the project and its documentation dependencies with uv. The
+# dependencies live in the "docs" dependency group of pyproject.toml and are
+# pinned by uv.lock.
 python:
     install:
-        - method: pip
-          path: ./
-          extra_requirements:
+        - method: uv
+          command: sync
+          groups:
               - docs

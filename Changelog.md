@@ -18,6 +18,13 @@ All notable changes to this project will be documented in this file.
 - Enum aliases (members whose value equals an earlier member's value, e.g.
   `False` next to `0`) are no longer missing from the generated enum.
 
+### Documentation
+
+- Read the Docs now installs the documentation dependencies with `uv sync` from
+  the `docs` dependency group and respects `uv.lock`. The previous `pip` install
+  requested a `docs` extra that did not exist, so the build failed with
+  `No module named 'sphinx_copybutton'`.
+
 ## [0.7.3]
 
 ### Fixed
