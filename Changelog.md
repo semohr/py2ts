@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.4]
+
+### Fixed
+
+- Literal values are rendered by their Python type instead of always being
+  quoted: booleans become `true`/`false`, numbers stay numeric and `None` becomes
+  `null`/`undefined`. `Literal["off", False]` now produces
+  `"off" \| false` instead of `"off" \| "False"`
+  ([#3](https://github.com/semohr/py2ts/issues/3)).
+- Literal string values are escaped, so e.g. `Literal['say "hi"']` no longer
+  generates invalid TypeScript.
+- Enum members with boolean or float values are emitted as `true`/`false` and
+  numeric literals instead of the invalid `False`/`ValueError`.
+- Enum aliases (members whose value equals an earlier member's value, e.g.
+  `False` next to `0`) are no longer missing from the generated enum.
+
+### Documentation
+
+- Read the Docs now installs the documentation dependencies with `uv sync` from
+  the `docs` dependency group and respects `uv.lock`. The previous `pip` install
+  requested a `docs` extra that did not exist, so the build failed with
+  `No module named 'sphinx_copybutton'`.
+
 ## [0.7.3]
 
 ### Fixed

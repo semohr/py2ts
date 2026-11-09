@@ -44,6 +44,9 @@ Primitive types are the most basic data types available within any programming l
 | `None`           | `null` or `undefined` |
 | `Any`            | `unknown` or `any`    |
 | `Literal["foo"]` | `"foo"`               |
+| `Literal[42]`    | `42`                  |
+| `Literal[False]` | `false`               |
+| `Literal[None]`  | `null` or `undefined` |
 
 ## Derived
 

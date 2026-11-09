@@ -6,6 +6,8 @@ interfaces.
 
 from __future__ import annotations
 
+import json
+import math
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass, field
@@ -163,12 +165,51 @@ class TSPrimitiveType(TypescriptType):
         return self.type.__hash__()
 
 
-@dataclass
+def _ts_literal_value(value: Any) -> str:
+    """Render a Python value as a TypeScript literal.
+
+    Strings are quoted (and escaped), booleans render as ``true``/``false``,
+    numbers as numeric literals and ``None`` depending on the ``none_as_null``
+    config. Enum members render as the literal of their value.
+
+    Raises
+    ------
+    ValueError
+        If the value has no TypeScript literal representation (e.g. ``bytes``).
+    """
+    if isinstance(value, Enum):
+        # Also covers IntEnum/StrEnum members, which are int/str subclasses
+        return _ts_literal_value(value.value)
+    # bool has to be checked before int, since bool is a subclass of int
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return "null" if CONFIG.none_as_null else "undefined"
+    if isinstance(value, str):
+        return json.dumps(value, ensure_ascii=False)
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        if math.isnan(value):
+            return "NaN"
+        if math.isinf(value):
+            return "Infinity" if value > 0 else "-Infinity"
+        return repr(value)
+
+    raise ValueError(
+        f"Unsupported literal value {value!r} of type {type(value).__name__}: "
+        "it has no TypeScript literal representation."
+    )
+
+
+@dataclass(eq=False)
 class TSLiteralType(TypescriptType):
     """Represents a TypeScript literal type.
 
     Example:
     "foo"
+    42
+    true
     """
 
     value: Any
@@ -178,11 +219,21 @@ class TSLiteralType(TypescriptType):
 
         For use in the generated code.
         """
-        return f'"{self.value}"'
+        return _ts_literal_value(self.value)
+
+    def __eq__(self, other: object) -> bool:
+        """Return whether the literal is equal to the other.
+
+        The value type is part of the comparison, because Python considers
+        ``True == 1`` while ``true`` and ``1`` are distinct TypeScript literals.
+        """
+        if not isinstance(other, TSLiteralType):
+            return NotImplemented
+        return type(self.value) is type(other.value) and self.value == other.value
 
     def __hash__(self) -> int:
         """Return a hash value for the literal type."""
-        return hash(self.value)
+        return hash((type(self.value), self.value))
 
 
 @dataclass
@@ -435,7 +486,7 @@ class TSComplex(TypescriptType, ABC):
 class TSEnumType(TSComplex):
     """Represents a TypeScript enum type."""
 
-    elements: dict[str, str | int]
+    elements: dict[str, str | int | float | bool]
 
     def __str__(self) -> str:
         """Return a string representation of the enum for use in the generated code.
@@ -448,8 +499,10 @@ class TSEnumType(TSComplex):
         for key, value in self.elements.items():
             if isinstance(value, str):
                 enum_str += f"{CONFIG.tab}{key} = '{value}',\n"
-            elif isinstance(value, int):
-                enum_str += f"{CONFIG.tab}{key} = {value},\n"
+            elif isinstance(value, (bool, int, float)):
+                # bool has to be handled by _ts_literal_value, since bool is a
+                # subclass of int and would otherwise render as False/True
+                enum_str += f"{CONFIG.tab}{key} = {_ts_literal_value(value)},\n"
             else:
                 raise ValueError(f"Invalid value for enum: {value}")
         enum_str += "}"

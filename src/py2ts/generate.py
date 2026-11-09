@@ -443,9 +443,8 @@ def _inheritance_ref(
 def _enum_to_ts(py_type: type[enum.Enum]):
     name = py_type.__name__
 
-    elements = {}
-    for e in py_type:
-        elements[e.name] = e.value
+    # __members__ also contains aliases (equal values); TS enums have none
+    elements = {k: m.value for k, m in py_type.__members__.items()}
 
     return TSEnumType(name, elements)
 
